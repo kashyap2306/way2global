@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { createMLMUser, checkEmailExists, checkContactExists } from '../../services/firestoreService';
 
 interface SignupFormProps {
   onSwitchToLogin: () => void;
@@ -18,7 +16,6 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
 
   const validateForm = async (): Promise<boolean> => {
     const newErrors: { [key: string]: string } = {};
@@ -33,8 +30,6 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
       newErrors.email = 'Email is required';
     } else if (!formData.email.endsWith('@gmail.com')) {
       newErrors.email = 'Only Gmail addresses are allowed';
-    } else if (await checkEmailExists(formData.email)) {
-      newErrors.email = 'This email is already registered';
     }
 
     // Contact validation
@@ -42,8 +37,6 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
       newErrors.contact = 'Contact number is required';
     } else if (!/^\+?[\d\s\-\(\)]{10,}$/.test(formData.contact)) {
       newErrors.contact = 'Please enter a valid contact number';
-    } else if (await checkContactExists(formData.contact)) {
-      newErrors.contact = 'This contact number is already registered';
     }
 
     // Password validation
@@ -75,23 +68,28 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
 
     try {
       if (await validateForm()) {
-        // Create Firebase user
-        const user = await signup(formData.email, formData.password, formData.displayName);
+        // Use the Firebase callable function for signup
+        const { getFunctions, httpsCallable } = await import('firebase/functions');
+        const functions = getFunctions();
+        const signupFunction = httpsCallable(functions, 'signup');
         
-        // Create MLM user in Firestore
-        await createMLMUser({
-          uid: user.uid,
+        const result = await signupFunction({
           email: formData.email,
-          contact: formData.contact,
+          password: formData.password,
           displayName: formData.displayName,
+          contact: formData.contact,
           walletAddress: formData.walletAddress,
           sponsorId: formData.sponsorId || null
         });
 
-        console.log('User created successfully');
+        console.log('User created successfully:', result.data);
+        
+        // The callable function handles both Firebase Auth and Firestore user creation
+        // No need to call createMLMUser separately
       }
     } catch (error: any) {
-      setErrors({ general: error.message });
+      console.error('Signup error:', error);
+      setErrors({ general: error.message || 'Failed to create account. Please try again.' });
     } finally {
       setLoading(false);
     }

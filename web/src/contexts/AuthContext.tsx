@@ -1,20 +1,53 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   type User,
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  createUserWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+
+interface MLMUserData {
+  uid: string;
+  displayName: string;
+  email: string;
+  contact?: string;
+  walletAddress?: string;
+  sponsorId?: string | null;
+  rank: string;
+  status: string;
+  balance: number;
+  totalEarnings: number;
+  referrals: string[];
+  activationAmount: number;
+  cyclesCompleted: number;
+  createdAt: any;
+  lastLoginAt?: any;
+  isActive: boolean;
+  role?: 'user' | 'admin';
+  // Additional MLM fields
+  level?: number;
+  pendingBalance?: number;
+  totalWithdrawals?: number;
+  directReferrals?: number;
+  teamSize?: number;
+  currentCycle?: number;
+  sideAmounts?: number[];
+}
 
 interface AuthContextType {
   currentUser: User | null;
-  signup: (email: string, password: string, displayName: string) => Promise<User>;
+  userData: MLMUserData | null;
+  user: User | null; // Alias for backward compatibility
+  userDoc: MLMUserData | null; // Alias for backward compatibility
   login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, displayName: string) => Promise<User>;
   logout: () => Promise<void>;
   loading: boolean;
+  updateUserData: (data: Partial<MLMUserData>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,37 +66,171 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<MLMUserData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const signup = async (email: string, password: string, displayName: string): Promise<User> => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(userCredential.user, { displayName });
-    return userCredential.user;
+    try {
+      console.log('[AuthContext] Starting signup process for:', email);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Update profile with display name
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { displayName });
+      }
+
+      // Create user document in Firestore
+      const newUserData: MLMUserData = {
+        uid: user.uid,
+        displayName,
+        email: user.email || email,
+        rank: 'Bronze',
+        status: 'active',
+        balance: 0,
+        totalEarnings: 0,
+        referrals: [],
+        activationAmount: 0,
+        cyclesCompleted: 0,
+        isActive: true,
+        role: 'user',
+        level: 1,
+        pendingBalance: 0,
+        totalWithdrawals: 0,
+        directReferrals: 0,
+        teamSize: 0,
+        currentCycle: 0,
+        sideAmounts: [10, 20, 40, 80, 160, 320, 640, 1280],
+        createdAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp()
+      };
+
+      await setDoc(doc(db, 'users', user.uid), newUserData);
+      console.log('[AuthContext] User document created successfully');
+      
+      return user;
+    } catch (error) {
+      console.error('[AuthContext] Signup error:', error);
+      throw error;
+    }
   };
 
   const login = async (email: string, password: string): Promise<void> => {
-    await signInWithEmailAndPassword(auth, email, password);
+    try {
+      console.log('[AuthContext] Starting login process for:', email);
+      
+      // Authenticate with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+      
+      // Fetch user document from Firestore
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (!userDoc.exists()) {
+        console.error('[AuthContext] User document not found for UID:', uid);
+        throw new Error('User document not found. Please contact support to recreate your account.');
+      }
+      
+      // Set user data in global state
+      const userData = userDoc.data() as MLMUserData;
+      const completeUserData: MLMUserData = {
+        ...userData,
+        uid,
+        lastLoginAt: serverTimestamp()
+      };
+      
+      // Update last login time
+      await updateDoc(doc(db, 'users', uid), {
+        lastLoginAt: serverTimestamp()
+      });
+      
+      setUserData(completeUserData);
+      console.log('[AuthContext] Login successful for user:', userData.displayName);
+      
+    } catch (error) {
+      console.error('[AuthContext] Login error:', error);
+      throw error;
+    }
   };
 
   const logout = async (): Promise<void> => {
-    await signOut(auth);
+    try {
+      console.log('[AuthContext] Logging out user');
+      await signOut(auth);
+      setUserData(null);
+    } catch (error) {
+      console.error('[AuthContext] Logout error:', error);
+      throw error;
+    }
+  };
+
+  const updateUserData = async (data: Partial<MLMUserData>): Promise<void> => {
+    if (!currentUser) {
+      throw new Error('No user logged in');
+    }
+    
+    try {
+      console.log('[AuthContext] Updating user data:', data);
+      await updateDoc(doc(db, 'users', currentUser.uid), data);
+      
+      // Update local state
+      if (userData) {
+        setUserData({ ...userData, ...data });
+      }
+      
+      console.log('[AuthContext] User data updated successfully');
+    } catch (error) {
+      console.error('[AuthContext] Error updating user data:', error);
+      throw error;
+    }
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('[AuthContext] Auth state changed:', user ? user.email : 'No user');
       setCurrentUser(user);
+      
+      if (user) {
+        // Always fetch fresh user data when auth state changes
+        try {
+          console.log('[AuthContext] Fetching user data for UID:', user.uid);
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const fetchedUserData = userDoc.data() as MLMUserData;
+            setUserData({
+              ...fetchedUserData,
+              uid: user.uid
+            });
+            console.log('[AuthContext] User data loaded successfully');
+          } else {
+            console.error('[AuthContext] User document not found for authenticated user:', user.uid);
+            // Show user-friendly error message
+            alert('Your account data is missing. Please contact support to recreate your account.');
+            setUserData(null);
+          }
+        } catch (error) {
+          console.error('[AuthContext] Error fetching user data:', error);
+          setUserData(null);
+        }
+      } else {
+        setUserData(null);
+      }
+      
       setLoading(false);
     });
 
     return unsubscribe;
-  }, []);
+  }, []); // Empty dependency array to avoid infinite loops
 
   const value: AuthContextType = {
     currentUser,
-    signup,
+    userData,
+    user: currentUser, // Alias for backward compatibility
+    userDoc: userData, // Alias for backward compatibility
     login,
+    signup,
     logout,
-    loading
+    loading,
+    updateUserData
   };
 
   return (
