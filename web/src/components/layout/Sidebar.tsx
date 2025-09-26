@@ -33,54 +33,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const menuItems: MenuItem[] = [
     {
-      id: 'home',
-      label: 'Home',
-      icon: <Home className="h-5 w-5" />,
-      route: '/dashboard/home',
-    },
-    {
-      id: 'referrals',
-      label: 'Referrals & Team',
-      icon: <Users className="h-5 w-5" />,
-      route: '/dashboard/referrals',
-    },
-    {
-      id: 'topup',
-      label: 'Topup',
-      icon: <CreditCard className="h-5 w-5" />,
-      route: '/dashboard/topup',
-    },
-    {
-      id: 'level-income',
-      label: 'Level Income / Re-Level Income',
-      icon: <TrendingUp className="h-5 w-5" />,
-      route: '/dashboard/level-income',
-    },
-    {
-      id: 'global-income',
-      label: 'Global Income / Re-Global Income',
-      icon: <Globe className="h-5 w-5" />,
-      route: '/dashboard/global-income',
-    },
-    {
-      id: 'wallet',
-      label: 'Wallet Balance',
-      icon: <Wallet className="h-5 w-5" />,
-      route: '/dashboard/wallet',
-    },
-    {
-      id: 'withdrawal',
-      label: 'Withdrawal',
-      icon: <ArrowDownToLine className="h-5 w-5" />,
-      route: '/dashboard/withdrawal',
-    },
-    {
-      id: 'profile',
-      label: 'Profile Management',
-      icon: <User className="h-5 w-5" />,
-      route: '/dashboard/profile',
-    },
-    {
       id: 'logout',
       label: 'Logout',
       icon: <LogOut className="h-5 w-5" />,
