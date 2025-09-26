@@ -1,0 +1,820 @@
+﻿src/callable/claimPayout.ts(9,23): error TS2305: Module '"../config"' has no exported member 'rateLimits'.
+src/callable/claimPayout.ts(112,18): error TS2339: Property 'PAYOUT_CLAIM_FAILED' does not exist on type '{ AUTH_INVALID_TOKEN: string; AUTH_TOKEN_EXPIRED: string; AUTH_INSUFFICIENT_PERMISSIONS: string; VALIDATION_INVALID_EMAIL: string; VALIDATION_INVALID_WALLET: string; VALIDATION_INVALID_CONTACT: string; ... 7 more ...; INTERNAL_SERVER_ERROR: string; }'.
+src/callable/claimPayout.ts(436,22): error TS2339: Property 'status' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/claimPayout.ts(437,36): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/claimPayout.ts(440,22): error TS2339: Property 'status' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/claimPayout.ts(441,36): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/claimPayout.ts(444,22): error TS2339: Property 'status' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/claimPayout.ts(445,36): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/claimPayout.ts(454,43): error TS2339: Property 'status' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/claimPayout.ts(455,45): error TS2339: Property 'status' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/claimPayout.ts(456,45): error TS2339: Property 'status' does not exist on type '{ createdAt: any; expiresAt: any; claimedAt: any; id: string; }'.
+src/callable/createActivation.ts(30,28): error TS2339: Property 'min' does not exist on type 'Schema<any>'.
+  Property 'min' does not exist on type 'AnySchema<any>'.
+src/callable/createActivation.ts(120,32): error TS2339: Property 'ACTIVATION_CREATED' does not exist on type '{ USER_CREATED: string; ACTIVATION_SUCCESSFUL: string; WITHDRAWAL_REQUESTED: string; PROFILE_UPDATED: string; PAYOUT_CLAIMED: string; }'.
+src/callable/createActivation.ts(141,18): error TS2339: Property 'ACTIVATION_FAILED' does not exist on type '{ AUTH_INVALID_TOKEN: string; AUTH_TOKEN_EXPIRED: string; AUTH_INSUFFICIENT_PERMISSIONS: string; VALIDATION_INVALID_EMAIL: string; VALIDATION_INVALID_WALLET: string; VALIDATION_INVALID_CONTACT: string; ... 7 more ...; INTERNAL_SERVER_ERROR: string; }'.
+src/callable/requestWithdrawal.ts(9,34): error TS2305: Module '"../config"' has no exported member 'rateLimits'.
+src/callable/requestWithdrawal.ts(10,1): error TS6133: 'payoutProcessor' is declared but its value is never read.
+src/callable/requestWithdrawal.ts(16,49): error TS2339: Property 'minimumAmount' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/callable/requestWithdrawal.ts(21,28): error TS2339: Property 'min' does not exist on type 'Schema<any>'.
+  Property 'min' does not exist on type 'AnySchema<any>'.
+src/callable/requestWithdrawal.ts(156,18): error TS2339: Property 'WITHDRAWAL_FAILED' does not exist on type '{ AUTH_INVALID_TOKEN: string; AUTH_TOKEN_EXPIRED: string; AUTH_INSUFFICIENT_PERMISSIONS: string; VALIDATION_INVALID_EMAIL: string; VALIDATION_INVALID_WALLET: string; VALIDATION_INVALID_CONTACT: string; ... 7 more ...; INTERNAL_SERVER_ERROR: string; }'.
+src/callable/requestWithdrawal.ts(283,37): error TS2339: Property 'minimumAmount' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/callable/requestWithdrawal.ts(286,60): error TS2339: Property 'minimumAmount' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/callable/requestWithdrawal.ts(383,50): error TS2339: Property 'processingFeePercentage' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/callable/requestWithdrawal.ts(389,41): error TS2339: Property 'networkFees' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/callable/requestWithdrawal.ts(392,41): error TS2339: Property 'networkFees' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/callable/requestWithdrawal.ts(428,45): error TS2339: Property 'dailyLimit' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/callable/seedDatabase.ts(6,1): error TS6133: 'admin' is declared but its value is never read.
+src/callable/seedDatabase.ts(10,1): error TS6192: All imports in import declaration are unused.
+src/callable/signup.ts(124,18): error TS2339: Property 'SIGNUP_FAILED' does not exist on type '{ AUTH_INVALID_TOKEN: string; AUTH_TOKEN_EXPIRED: string; AUTH_INSUFFICIENT_PERMISSIONS: string; VALIDATION_INVALID_EMAIL: string; VALIDATION_INVALID_WALLET: string; VALIDATION_INVALID_CONTACT: string; ... 7 more ...; INTERNAL_SERVER_ERROR: string; }'.
+src/callable/signup.ts(136,30): error TS2304: Cannot find name 'rateLimits'.
+src/callable/signup.ts(151,36): error TS2552: Cannot find name 'rateLimits'. Did you mean 'rateLimitDoc'?
+src/callable/signup.ts(285,11): error TS6133: 'hashedPassword' is declared but its value is never read.
+src/callable/signup.ts(373,7): error TS2783: 'uid' is specified more than once, so this usage will be overwritten.
+src/handlers/adminHandlers.ts(13,23): error TS2305: Module '"../config"' has no exported member 'corsOptions'.
+src/handlers/adminHandlers.ts(13,36): error TS2305: Module '"../config"' has no exported member 'rateLimits'.
+src/handlers/adminHandlers.ts(13,48): error TS6133: 'errorCodes' is declared but its value is never read.
+src/handlers/adminHandlers.ts(13,60): error TS6133: 'successMessages' is declared but its value is never read.
+src/handlers/adminHandlers.ts(20,13): error TS2349: This expression is not callable.
+  Type 'typeof e' has no call signatures.
+src/handlers/adminHandlers.ts(23,9): error TS2349: This expression is not callable.
+  Type 'typeof import("C:/Users/yash/wayglobe/functions/node_modules/helmet/index")' has no call signatures.
+src/handlers/adminHandlers.ts(24,9): error TS2349: This expression is not callable.
+  Type '{ default: <T extends e.CorsRequest = CorsRequest>(options?: CorsOptions | CorsOptionsDelegate<T> | undefined) => (req: T, res: { statusCode?: number | undefined; setHeader(key: string, value: string): any; end(): any; }, next: (err?: any) => any) => void; }' has no call signatures.
+src/handlers/adminHandlers.ts(28,22): error TS2349: This expression is not callable.
+  Type 'typeof import("C:/Users/yash/wayglobe/functions/node_modules/express-rate-limit/dist/index")' has no call signatures.
+src/handlers/adminHandlers.ts(42,22): error TS7030: Not all code paths return a value.
+src/handlers/adminHandlers.ts(125,36): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(125,41): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(209,32): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(209,37): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(220,7): error TS2740: Type 'Query<DocumentData, DocumentData>' is missing the following properties from type 'CollectionReference<DocumentData, DocumentData>': id, parent, path, listDocuments, and 2 more.
+src/handlers/adminHandlers.ts(241,14): error TS2339: Property 'fullName' does not exist on type '{ createdAt: any; updatedAt: any; id: string; }'.
+src/handlers/adminHandlers.ts(242,14): error TS2339: Property 'email' does not exist on type '{ createdAt: any; updatedAt: any; id: string; }'.
+src/handlers/adminHandlers.ts(243,14): error TS2339: Property 'userId' does not exist on type '{ createdAt: any; updatedAt: any; id: string; }'.
+src/handlers/adminHandlers.ts(283,40): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(283,45): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(367,40): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(367,45): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(444,38): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(444,43): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(454,7): error TS2740: Type 'Query<DocumentData, DocumentData>' is missing the following properties from type 'CollectionReference<DocumentData, DocumentData>': id, parent, path, listDocuments, and 2 more.
+src/handlers/adminHandlers.ts(522,52): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(522,57): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(647,35): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(647,40): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(682,35): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(682,40): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(738,43): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(738,48): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(780,27): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/adminHandlers.ts(780,32): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(11,1): error TS6133: 'bcrypt' is declared but its value is never read.
+src/handlers/authHandlers.ts(14,23): error TS2305: Module '"../config"' has no exported member 'corsOptions'.
+src/handlers/authHandlers.ts(14,36): error TS2305: Module '"../config"' has no exported member 'rateLimits'.
+src/handlers/authHandlers.ts(19,13): error TS2349: This expression is not callable.
+  Type 'typeof e' has no call signatures.
+src/handlers/authHandlers.ts(22,9): error TS2349: This expression is not callable.
+  Type 'typeof import("C:/Users/yash/wayglobe/functions/node_modules/helmet/index")' has no call signatures.
+src/handlers/authHandlers.ts(23,9): error TS2349: This expression is not callable.
+  Type '{ default: <T extends e.CorsRequest = CorsRequest>(options?: CorsOptions | CorsOptionsDelegate<T> | undefined) => (req: T, res: { statusCode?: number | undefined; setHeader(key: string, value: string): any; end(): any; }, next: (err?: any) => any) => void; }' has no call signatures.
+src/handlers/authHandlers.ts(27,21): error TS2349: This expression is not callable.
+  Type 'typeof import("C:/Users/yash/wayglobe/functions/node_modules/express-rate-limit/dist/index")' has no call signatures.
+src/handlers/authHandlers.ts(63,32): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(63,37): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(75,20): error TS6133: 'password' is declared but its value is never read.
+src/handlers/authHandlers.ts(157,32): error TS2339: Property 'LOGIN_SUCCESS' does not exist on type '{ USER_CREATED: string; ACTIVATION_SUCCESSFUL: string; WITHDRAWAL_REQUESTED: string; PROFILE_UPDATED: string; PAYOUT_CLAIMED: string; }'.
+src/handlers/authHandlers.ts(186,25): error TS2339: Property 'LOGIN_FAILED' does not exist on type '{ AUTH_INVALID_TOKEN: string; AUTH_TOKEN_EXPIRED: string; AUTH_INSUFFICIENT_PERMISSIONS: string; VALIDATION_INVALID_EMAIL: string; VALIDATION_INVALID_WALLET: string; VALIDATION_INVALID_CONTACT: string; ... 7 more ...; INTERNAL_SERVER_ERROR: string; }'.
+src/handlers/authHandlers.ts(196,34): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(196,39): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(225,12): error TS6133: 'userRecord' is declared but its value is never read.
+src/handlers/authHandlers.ts(297,33): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(297,38): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(355,41): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(355,46): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(420,42): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(420,47): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(453,13): error TS6133: 'currentPassword' is declared but its value is never read.
+src/handlers/authHandlers.ts(499,38): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(499,43): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(574,26): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/authHandlers.ts(574,31): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(13,23): error TS2305: Module '"../config"' has no exported member 'corsOptions'.
+src/handlers/userHandlers.ts(13,36): error TS2305: Module '"../config"' has no exported member 'rateLimits'.
+src/handlers/userHandlers.ts(13,48): error TS6133: 'errorCodes' is declared but its value is never read.
+src/handlers/userHandlers.ts(13,60): error TS6133: 'successMessages' is declared but its value is never read.
+src/handlers/userHandlers.ts(14,1): error TS6192: All imports in import declaration are unused.
+src/handlers/userHandlers.ts(14,35): error TS2724: '"../utils/math"' has no exported member named 'calculateBinaryLevel'. Did you mean 'calculateTreeLevel'?
+src/handlers/userHandlers.ts(19,13): error TS2349: This expression is not callable.
+  Type 'typeof e' has no call signatures.
+src/handlers/userHandlers.ts(22,9): error TS2349: This expression is not callable.
+  Type 'typeof import("C:/Users/yash/wayglobe/functions/node_modules/helmet/index")' has no call signatures.
+src/handlers/userHandlers.ts(23,9): error TS2349: This expression is not callable.
+  Type '{ default: <T extends e.CorsRequest = CorsRequest>(options?: CorsOptions | CorsOptionsDelegate<T> | undefined) => (req: T, res: { statusCode?: number | undefined; setHeader(key: string, value: string): any; end(): any; }, next: (err?: any) => any) => void; }' has no call signatures.
+src/handlers/userHandlers.ts(27,21): error TS2349: This expression is not callable.
+  Type 'typeof import("C:/Users/yash/wayglobe/functions/node_modules/express-rate-limit/dist/index")' has no call signatures.
+src/handlers/userHandlers.ts(41,21): error TS7030: Not all code paths return a value.
+src/handlers/userHandlers.ts(120,35): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(120,40): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(176,46): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; id: string; }'.
+src/handlers/userHandlers.ts(265,33): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(265,38): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(340,33): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(340,38): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(393,34): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(393,39): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(457,87): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; id: string; }'.
+src/handlers/userHandlers.ts(466,46): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; id: string; }'.
+src/handlers/userHandlers.ts(508,38): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(508,43): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(576,33): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(576,38): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(605,71): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; id: string; }'.
+src/handlers/userHandlers.ts(608,27): error TS2339: Property 'type' does not exist on type '{ createdAt: any; id: string; }'.
+src/handlers/userHandlers.ts(609,46): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; id: string; }'.
+src/handlers/userHandlers.ts(656,37): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(656,42): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(679,22): error TS2339: Property 'status' does not exist on type '{ createdAt: any; updatedAt: any; id: string; }'.
+src/handlers/userHandlers.ts(680,36): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; updatedAt: any; id: string; }'.
+src/handlers/userHandlers.ts(683,22): error TS2339: Property 'status' does not exist on type '{ createdAt: any; updatedAt: any; id: string; }'.
+src/handlers/userHandlers.ts(684,36): error TS2339: Property 'amount' does not exist on type '{ createdAt: any; updatedAt: any; id: string; }'.
+src/handlers/userHandlers.ts(730,30): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(730,35): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(835,26): error TS7006: Parameter 'req' implicitly has an 'any' type.
+src/handlers/userHandlers.ts(835,31): error TS7006: Parameter 'res' implicitly has an 'any' type.
+src/services/incomeEngine.ts(424,17): error TS2339: Property 'participants' does not exist on type '{ id: string; }'.
+src/services/incomeEngine.ts(427,32): error TS2339: Property 'participants' does not exist on type '{ id: string; rank: string; participants: string[]; totalAmount: number; isComplete: boolean; createdAt: FieldValue; completedAt: null; } | { id: string; }'.
+  Property 'participants' does not exist on type '{ id: string; }'.
+src/services/incomeEngine.ts(432,22): error TS2339: Property 'ref' does not exist on type 'DocumentReference<DocumentData, DocumentData> | QueryDocumentSnapshot<DocumentData, DocumentData>'.
+  Property 'ref' does not exist on type 'DocumentReference<DocumentData, DocumentData>'.
+src/services/incomeEngine.ts(443,31): error TS2339: Property 'participants' does not exist on type '{ id: string; rank: string; participants: string[]; totalAmount: number; isComplete: boolean; createdAt: FieldValue; completedAt: null; } | { id: string; }'.
+  Property 'participants' does not exist on type '{ id: string; }'.
+src/services/incomeEngine.ts(444,30): error TS2339: Property 'totalAmount' does not exist on type '{ id: string; rank: string; participants: string[]; totalAmount: number; isComplete: boolean; createdAt: FieldValue; completedAt: null; } | { id: string; }'.
+  Property 'totalAmount' does not exist on type '{ id: string; }'.
+src/services/incomeEngine.ts(460,11): error TS6133: 'amountPerLevel' is declared but its value is never read.
+src/services/payoutProcessor.ts(128,39): error TS2339: Property 'minimumAmount' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/payoutProcessor.ts(129,77): error TS2339: Property 'minimumAmount' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/payoutProcessor.ts(178,46): error TS2339: Property 'fees' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/payoutProcessor.ts(181,46): error TS2339: Property 'fees' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/payoutProcessor.ts(184,46): error TS2339: Property 'fees' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/payoutProcessor.ts(187,46): error TS2339: Property 'fees' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/payoutProcessor.ts(575,45): error TS2339: Property 'dailyLimit' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/payoutProcessor.ts(624,38): error TS2352: Conversion of type '{ id: string; }' to type 'WithdrawalRequest' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: string; }' is missing the following properties from type 'WithdrawalRequest': uid, amount, method, status, and 3 more.
+src/services/seed.ts(332,49): error TS2339: Property 'minimumAmount' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/seed.ts(333,46): error TS2339: Property 'dailyLimit' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/seed.ts(334,40): error TS2339: Property 'fees' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/seedService.ts(6,1): error TS6133: 'bcrypt' is declared but its value is never read.
+src/services/seedService.ts(8,34): error TS2305: Module '"../config"' has no exported member 'bcryptRounds'.
+src/services/seedService.ts(8,34): error TS6133: 'bcryptRounds' is declared but its value is never read.
+src/services/seedService.ts(64,45): error TS2339: Property 'Starter' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'.
+src/services/seedService.ts(66,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(67,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(68,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(69,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(83,45): error TS2339: Property 'Basic' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'.
+src/services/seedService.ts(85,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(86,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(87,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(88,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(102,45): error TS2339: Property 'Standard' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'.
+src/services/seedService.ts(104,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(105,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(106,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(107,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(121,45): error TS2339: Property 'Advanced' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'.
+src/services/seedService.ts(123,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(124,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(125,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(126,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(140,45): error TS2339: Property 'Professional' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'.
+src/services/seedService.ts(142,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(143,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(144,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(145,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(159,45): error TS2339: Property 'Executive' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'.
+src/services/seedService.ts(161,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(162,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(163,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(164,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(178,45): error TS2551: Property 'Diamond' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'. Did you mean 'diamond'?
+src/services/seedService.ts(180,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(181,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(182,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(183,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(197,45): error TS2551: Property 'Crown' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'. Did you mean 'crown'?
+src/services/seedService.ts(199,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(200,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(201,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(202,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(216,45): error TS2339: Property 'Ambassador' does not exist on type '{ azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }'.
+src/services/seedService.ts(218,39): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(219,36): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(220,37): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(221,38): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(263,47): error TS2339: Property 'minimumAmount' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/seedService.ts(264,47): error TS2339: Property 'maximumAmount' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/seedService.ts(265,47): error TS2551: Property 'processingFee' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'. Did you mean 'processingTime'?
+src/services/seedService.ts(266,44): error TS2339: Property 'dailyLimit' does not exist on type '{ minimum: number; bankDeduction: number; fundConversion: number; p2pFee: number; usdtFee: number; processingTime: { bank: number; usdt: number; p2p: number; }; }'.
+src/services/seedService.ts(273,35): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(277,35): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(278,34): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(282,35): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(286,35): error TS2551: Property 'income' does not exist on type '{ ranks: { azurite: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; pearl: { name: string; activationAmount: number; benefits: { levelIncome: boolean; globalIncome: boolean; }; }; ... 7 more ...; royalCrown: { ...; }; }; incomes: { ...; }; withdrawal: { ...; }...'. Did you mean 'incomes'?
+src/services/seedService.ts(291,47): error TS2339: Property 'targetAmount' does not exist on type '{ triggerInterval: number; maxCyclesPerRun: number; autoTopupEnabled: boolean; reidGenerationEnabled: boolean; }'.
+src/services/seedService.ts(292,53): error TS2339: Property 'processingInterval' does not exist on type '{ triggerInterval: number; maxCyclesPerRun: number; autoTopupEnabled: boolean; reidGenerationEnabled: boolean; }'.
+src/services/seedService.ts(294,49): error TS2339: Property 'reIdGeneration' does not exist on type '{ triggerInterval: number; maxCyclesPerRun: number; autoTopupEnabled: boolean; reidGenerationEnabled: boolean; }'.
+src/services/seedService.ts(488,17): error TS6133: 'authUser' is declared but its value is never read.
+src/services/seedService.ts(511,19): error TS2554: Expected 2 arguments, but got 1.
+src/services/seedService.ts(638,47): error TS2339: Property 'targetAmount' does not exist on type '{ triggerInterval: number; maxCyclesPerRun: number; autoTopupEnabled: boolean; reidGenerationEnabled: boolean; }'.
+src/services/seedService.ts(639,48): error TS2339: Property 'targetAmount' does not exist on type '{ triggerInterval: number; maxCyclesPerRun: number; autoTopupEnabled: boolean; reidGenerationEnabled: boolean; }'.
+src/services/seedService.ts(648,47): error TS2339: Property 'targetAmount' does not exist on type '{ triggerInterval: number; maxCyclesPerRun: number; autoTopupEnabled: boolean; reidGenerationEnabled: boolean; }'.
+src/services/seedService.ts(649,48): error TS2339: Property 'targetAmount' does not exist on type '{ triggerInterval: number; maxCyclesPerRun: number; autoTopupEnabled: boolean; reidGenerationEnabled: boolean; }'.
+src/services/validationService.ts(274,20): error TS6133: 'value' is declared but its value is never read.
+src/triggers/onActivationTxCreated.ts(251,16): error TS6133: 'handleRankUpgrade' is declared but its value is never read.
+src/triggers/onActivationTxCreated.ts(291,16): error TS6133: 'validateActivationTransaction' is declared but its value is never read.
+src/triggers/scheduledGlobalCycle.ts(9,1): error TS6133: 'incomeEngine' is declared but its value is never read.
+src/utils/logger.ts(5,1): error TS6133: 'functions' is declared but its value is never read.
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es5.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2016.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2018.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2019.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.dom.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.dom.iterable.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.webworker.importscripts.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.scripthost.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.core.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.collection.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.generator.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.iterable.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.promise.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.proxy.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.reflect.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.symbol.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2016.array.include.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2016.intl.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.arraybuffer.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.date.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.object.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.string.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.intl.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.typedarrays.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2018.asynciterable.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2018.intl.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2018.promise.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2018.regexp.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2019.array.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2019.object.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2019.string.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2019.symbol.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2019.intl.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.bigint.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.date.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.promise.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.string.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.intl.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2020.number.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.esnext.disposable.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.esnext.float16.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.decorators.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.decorators.legacy.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/typescript/lib/lib.es2017.full.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/logger/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/compatibility/iterators.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/globals.typedarray.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/buffer.buffer.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/globals.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/web-globals/abortcontroller.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/web-globals/domexception.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/web-globals/events.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/utility.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/header.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/readable.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/fetch.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/formdata.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/connector.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/client-stats.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/errors.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/dispatcher.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/global-dispatcher.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/global-origin.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/pool-stats.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/pool.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/handlers.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/balanced-pool.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/h2c-client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/agent.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/mock-interceptor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/mock-call-history.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/mock-agent.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/mock-client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/mock-pool.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/mock-errors.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/proxy-agent.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/env-http-proxy-agent.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/retry-handler.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/retry-agent.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/api.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/cache-interceptor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/interceptors.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/util.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/cookies.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/patch.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/websocket.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/eventsource.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/diagnostics-channel.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/content-type.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/cache.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/undici-types/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/web-globals/fetch.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/web-globals/navigator.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/web-globals/storage.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/assert.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/assert/strict.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/async_hooks.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/buffer.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/child_process.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/cluster.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/console.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/constants.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/crypto.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/dgram.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/diagnostics_channel.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/dns.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/dns/promises.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/domain.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/events.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/fs.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/fs/promises.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/http.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/http2.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/https.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/inspector.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/inspector.generated.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/module.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/net.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/os.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/path.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/perf_hooks.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/process.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/punycode.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/querystring.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/readline.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/readline/promises.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/repl.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/sea.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/sqlite.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/stream.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/stream/promises.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/stream/consumers.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/stream/web.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/string_decoder.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/test.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/timers.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/timers/promises.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/tls.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/trace_events.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/tty.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/url.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/util.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/v8.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/vm.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/wasi.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/worker_threads.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/zlib.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/node/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/mime/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/send/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/qs/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/range-parser/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/express-serve-static-core/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/http-errors/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/serve-static/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/connect/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/body-parser/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/node_modules/@types/express/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/params/types.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/params/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/options.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/function-configuration.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/runtime/manifest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/change.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/cloud-functions.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/analytics.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app/credential.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app/core.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app/lifecycle.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app/credential-factory.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/utils/error.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/token-verifier.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/auth-config.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/user-record.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/identifier.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/user-import-builder.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/action-code-settings-builder.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/base-auth.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/tenant.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/tenant-manager.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/project-config.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/project-config-manager.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/auth.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app-check/app-check-api.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app-check/app-check.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app-check/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/providers/tasks.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/providers/https.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/providers/identity.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/auth.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/params.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@firebase/logger/dist/src/logger.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@firebase/logger/dist/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@firebase/app-types/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@firebase/util/dist/util-public.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@firebase/database-types/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/database/database.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/database/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/providers/database.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/database.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/auth-context.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/metadata.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/call-credentials.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/constants.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/deadline.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/certificate-provider.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/compression-algorithms.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/channel-options.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/uri-parser.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/channel-credentials.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/connectivity-state.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@js-sdsl/ordered-map/dist/esm/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/protobufjs/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/protobufjs/ext/descriptor/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/node_modules/@grpc/proto-loader/build/src/util.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/long/umd/types.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/long/umd/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/node_modules/@grpc/proto-loader/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/google/protobuf/Timestamp.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/ChannelRef.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/SubchannelRef.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/ChannelTraceEvent.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/ChannelTrace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/subchannel-address.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetChannelRequest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/ChannelConnectivityState.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/ChannelData.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/SocketRef.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/Channel.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetChannelResponse.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetServerRequest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/ServerRef.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/ServerData.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/Server.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetServerResponse.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetServerSocketsRequest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetServerSocketsResponse.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetServersRequest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetServersResponse.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetSocketRequest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/google/protobuf/Int64Value.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/google/protobuf/Any.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/SocketOption.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/SocketData.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/Address.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/Security.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/Socket.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetSocketResponse.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetSubchannelRequest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/Subchannel.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetSubchannelResponse.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetTopChannelsRequest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/GetTopChannelsResponse.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/grpc/channelz/v1/Channelz.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/channelz.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/channel.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/client-interceptors.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/server-credentials.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/subchannel-call.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/transport.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/xds/data/orca/v3/OrcaLoadReport.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/google/protobuf/Duration.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/xds/service/orca/v3/OrcaLoadReportRequest.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/generated/xds/service/orca/v3/OpenRcaService.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/subchannel.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/subchannel-interface.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/duration.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/service-config.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/load-balancer.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/picker.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/orca.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/server-interceptors.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/server.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/make-client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/events.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/object-stream.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/server-call.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/call-interface.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/call.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/status-builder.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/admin.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/logging.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/filter.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/resolver.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/backoff-timeout.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/load-balancer-pick-first.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/load-balancer-child-handler.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/filter-stack.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/load-balancer-outlier-detection.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/load-balancing-call.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/resolving-call.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/retrying-call.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/internal-channel.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/experimental.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/grpc-js/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/proto-loader/build/src/util.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@grpc/proto-loader/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/gaxios/build/src/common.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/gaxios/build/src/interceptor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/gaxios/build/src/gaxios.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/gaxios/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/transporters.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/credentials.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/crypto/crypto.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/util.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/authclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/loginticket.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/oauth2client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/idtokenclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/envDetect.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/gtoken/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/jwtclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/refreshclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/impersonated.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/baseexternalclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/identitypoolclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/awsrequestsigner.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/awsclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/externalclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/googleauth.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/gcp-metadata/build/src/gcp-residency.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/gcp-metadata/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/computeclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/iam.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/jwtaccess.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/downscopedclient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/auth/passthrough.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-auth-library/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/status.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/proto3-json-serializer/build/src/types.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/proto3-json-serializer/build/src/toproto3json.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/proto3-json-serializer/build/src/fromproto3json.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/proto3-json-serializer/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/googleError.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/call.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/streamingCalls/streaming.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/apiCaller.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/paginationCalls/pageDescriptor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/streamingCalls/streamDescriptor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/normalCalls/normalApiCaller.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/bundlingCalls/bundleApiCaller.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/bundlingCalls/bundleDescriptor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/descriptor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/protos/operations.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/clientInterface.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/routingHeader.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/protos/http.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/protos/iam_service.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/protos/locations.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/pathTemplate.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/iamService.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/locationService.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/util.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/protobufjs/minimal.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/warnings.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/event-target-shim/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/abort-controller/dist/abort-controller.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/streamArrayParser.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/fallbackServiceStub.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/fallback.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/operationsClient.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/longRunningCalls/longRunningApiCaller.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/longRunningCalls/longRunningDescriptor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/longRunningCalls/longrunning.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/apitypes.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/bundlingCalls/task.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/bundlingCalls/bundleExecutor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/gax.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/grpc.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/createApiCall.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/google-gax/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/firestore/types/protos/firestore_v1beta1_proto_api.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/firestore/types/v1beta1/firestore_client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/firestore/types/protos/firestore_v1_proto_api.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/firestore/types/v1/firestore_client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/firestore/types/protos/firestore_admin_v1_proto_api.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/firestore/types/v1/firestore_admin_client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/firestore/types/firestore.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/firestore/firestore-internal.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/firestore/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/firestore.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/https.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/pubsub.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/remoteConfig.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/storage.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/tasks.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/providers/testLab.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/app.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/config.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/config.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/function-builder.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/common/onInit.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-functions/lib/v1/index.d.ts
+C:/Users/yash/wayglobe/functions/src/config.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/app-check/app-check-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/auth/auth-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/database/database-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/firestore/firestore-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/instance-id/instance-id.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/instance-id/instance-id-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/installations/installations.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/installations/installations-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/machine-learning/machine-learning-api-client.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/machine-learning/machine-learning.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/machine-learning/machine-learning-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/messaging/messaging-api.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/messaging/messaging.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/messaging/messaging-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/project-management/app-metadata.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/project-management/android-app.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/project-management/ios-app.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/project-management/project-management.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/project-management/project-management-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/remote-config/remote-config-api.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/remote-config/remote-config.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/remote-config/remote-config-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/security-rules/security-rules.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/security-rules/security-rules-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/teeny-request/build/src/TeenyStatistics.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/teeny-request/build/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/nodejs-common/util.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/nodejs-common/service-object.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/nodejs-common/service.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/nodejs-common/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/acl.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/channel.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/resumable-upload.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/signer.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/crc32c.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/file.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/iam.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/notification.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/bucket.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/hmacKey.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/storage.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/hash-stream-validator.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/transfer-manager.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@google-cloud/storage/build/cjs/src/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/storage/storage.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/storage/storage-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/credential/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/firebase-namespace-api.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/default-namespace.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/firebase-admin/lib/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/express/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/cors/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/helmet/index.d.cts
+C:/Users/yash/wayglobe/functions/node_modules/express-rate-limit/dist/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/bcrypt/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/joi/lib/index.d.ts
+C:/Users/yash/wayglobe/functions/src/utils/logger.ts
+C:/Users/yash/wayglobe/functions/src/handlers/authHandlers.ts
+C:/Users/yash/wayglobe/functions/src/utils/math.ts
+C:/Users/yash/wayglobe/functions/src/services/payoutProcessor.ts
+C:/Users/yash/wayglobe/functions/src/handlers/adminHandlers.ts
+C:/Users/yash/wayglobe/functions/src/handlers/userHandlers.ts
+C:/Users/yash/wayglobe/functions/src/callable/signup.ts
+C:/Users/yash/wayglobe/functions/src/callable/createActivation.ts
+C:/Users/yash/wayglobe/functions/src/callable/requestWithdrawal.ts
+C:/Users/yash/wayglobe/functions/src/callable/claimPayout.ts
+C:/Users/yash/wayglobe/functions/src/services/seedService.ts
+C:/Users/yash/wayglobe/functions/src/callable/seedDatabase.ts
+C:/Users/yash/wayglobe/functions/src/triggers/onUserCreated.ts
+C:/Users/yash/wayglobe/functions/src/services/incomeEngine.ts
+C:/Users/yash/wayglobe/functions/src/triggers/onActivationTxCreated.ts
+C:/Users/yash/wayglobe/functions/src/triggers/scheduledGlobalCycle.ts
+C:/Users/yash/wayglobe/functions/src/index.ts
+C:/Users/yash/wayglobe/functions/src/services/seed.ts
+C:/Users/yash/wayglobe/functions/src/types/index.ts
+C:/Users/yash/wayglobe/functions/src/services/validationService.ts
+C:/Users/yash/wayglobe/functions/node_modules/@babel/types/lib/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/babel__generator/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@babel/parser/typings/babel-parser.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/babel__template/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/babel__traverse/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/babel__core/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/caseless/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/cookiejar/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/graceful-fs/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/istanbul-lib-coverage/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/istanbul-lib-report/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/istanbul-reports/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@jest/expect-utils/build/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/chalk/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@sinclair/typebox/typebox.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@jest/schemas/build/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/pretty-format/build/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/jest-diff/build/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/jest-matcher-utils/build/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/expect/build/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/jest/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/json-schema/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/ms/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/jsonwebtoken/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/common.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/array.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/collection.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/date.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/function.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/lang.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/math.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/number.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/object.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/seq.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/string.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/common/util.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/lodash/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/long/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/methods/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/moment/ts3.1-typings/moment.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/request/node_modules/form-data/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/tough-cookie/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/request/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/inc.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/classes/semver.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/parse.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/valid.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/clean.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/diff.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/major.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/minor.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/patch.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/prerelease.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/compare.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/rcompare.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/compare-loose.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/compare-build.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/sort.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/rsort.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/gt.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/lt.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/eq.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/neq.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/gte.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/lte.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/cmp.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/coerce.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/classes/comparator.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/classes/range.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/functions/satisfies.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/max-satisfying.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/min-satisfying.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/to-comparators.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/min-version.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/valid.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/outside.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/gtr.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/ltr.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/intersects.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/simplify.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/ranges/subset.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/internals/identifiers.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/semver/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/stack-utils/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/superagent/lib/agent-base.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/superagent/lib/node/response.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/superagent/types.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/superagent/lib/node/agent.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/superagent/lib/request-base.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/form-data/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/superagent/lib/node/http2wrapper.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/superagent/lib/node/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/superagent/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/supertest/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/uuid/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/yargs-parser/index.d.ts
+C:/Users/yash/wayglobe/functions/node_modules/@types/yargs/index.d.ts
+C:/Users/yash/wayglobe/node_modules/@types/estree/index.d.ts
