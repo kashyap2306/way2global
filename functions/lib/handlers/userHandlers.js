@@ -1,6 +1,7 @@
 "use strict";
 /**
- * HTTP Handlers - User Features
+ * HTTP Handlers - User Operations
+ * Clean implementation with proper TypeScript, Firebase Functions, and Express syntax
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -49,6 +50,7 @@ const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const Joi = __importStar(require("joi"));
 const logger_1 = require("../utils/logger");
 const config_1 = require("../config");
+// Initialize logger
 const logger = (0, logger_1.createLogger)('UserHandlers');
 // Create Express app
 const app = (0, express_1.default)();
@@ -56,7 +58,7 @@ const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)(config_1.corsOptions));
 app.use(express_1.default.json({ limit: '10mb' }));
-// Rate limiting
+// Rate limiting for user operations
 const userLimiter = (0, express_rate_limit_1.default)({
     windowMs: config_1.rateLimits.general.windowMs,
     max: config_1.rateLimits.general.max,
@@ -73,10 +75,11 @@ const requireAuth = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Authorization header required'
             });
+            return;
         }
         const idToken = authHeader.split('Bearer ')[1];
         let decodedToken;
@@ -84,16 +87,18 @@ const requireAuth = async (req, res, next) => {
             decodedToken = await admin.auth().verifyIdToken(idToken);
         }
         catch (tokenError) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Invalid token'
             });
+            return;
         }
         // Add user info to request
         req.user = {
             uid: decodedToken.uid,
             email: decodedToken.email,
             isActive: decodedToken.isActive || false,
+            isVerified: decodedToken.isVerified || false,
             rank: decodedToken.rank || 'Inactive'
         };
         next();
@@ -111,142 +116,154 @@ app.use('/user', requireAuth);
 // Validation schemas
 const profileUpdateSchema = Joi.object({
     fullName: Joi.string().min(2).max(100),
-    phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/),
-    dateOfBirth: Joi.date().max('now'),
-    address: Joi.object({
-        street: Joi.string().max(200),
-        city: Joi.string().max(100),
-        state: Joi.string().max(100),
-        country: Joi.string().max(100),
-        zipCode: Joi.string().max(20)
-    }),
+    contactNumber: Joi.string().pattern(/^\+?[\d\s\-\(\)]{10,15}$/),
+    walletAddress: Joi.string().min(26).max(62),
     bankDetails: Joi.object({
-        accountName: Joi.string().max(100),
-        accountNumber: Joi.string().max(50),
-        bankName: Joi.string().max(100),
-        routingNumber: Joi.string().max(50)
-    }),
-    cryptoWallets: Joi.object({
-        usdtBep20: Joi.string().max(100),
-        bitcoin: Joi.string().max(100),
-        ethereum: Joi.string().max(100)
+        accountNumber: Joi.string().min(8).max(20),
+        ifscCode: Joi.string().min(11).max(11),
+        accountHolderName: Joi.string().min(2).max(100),
+        bankName: Joi.string().min(2).max(100)
     })
 });
+// Helper function to calculate team statistics
+const calculateTeamStats = async (userId, level = 5) => {
+    const teamStats = {
+        totalMembers: 0,
+        activeMembers: 0,
+        levels: []
+    };
+    const processLevel = async (userIds, currentLevel) => {
+        if (currentLevel > level || userIds.length === 0) {
+            return [];
+        }
+        const levelUsers = await Promise.all(userIds.map(async (uid) => {
+            const userDoc = await admin.firestore()
+                .collection(config_1.collections.USERS)
+                .doc(uid)
+                .get();
+            return userDoc.exists ? { id: uid, ...userDoc.data() } : null;
+        }));
+        const validUsers = levelUsers.filter(user => user !== null);
+        const activeUsers = validUsers.filter(user => user.isActive);
+        teamStats.totalMembers += validUsers.length;
+        teamStats.activeMembers += activeUsers.length;
+        teamStats.levels.push({
+            level: currentLevel,
+            totalMembers: validUsers.length,
+            activeMembers: activeUsers.length,
+            members: validUsers.map(user => ({
+                id: user.id,
+                fullName: user.fullName,
+                email: user.email,
+                userId: user.userId,
+                isActive: user.isActive,
+                rank: user.rank,
+                joinedAt: user.createdAt?.toDate()
+            }))
+        });
+        // Get next level referrals
+        const nextLevelIds = [];
+        for (const user of validUsers) {
+            const referralsSnapshot = await admin.firestore()
+                .collection(config_1.collections.USERS)
+                .where('sponsorId', '==', user.id)
+                .get();
+            referralsSnapshot.docs.forEach(doc => {
+                nextLevelIds.push(doc.id);
+            });
+        }
+        return await processLevel(nextLevelIds, currentLevel + 1);
+    };
+    // Start with direct referrals
+    const directReferralsSnapshot = await admin.firestore()
+        .collection(config_1.collections.USERS)
+        .where('sponsorId', '==', userId)
+        .get();
+    const directReferralIds = directReferralsSnapshot.docs.map(doc => doc.id);
+    await processLevel(directReferralIds, 1);
+    return teamStats;
+};
 /**
  * GET /user/dashboard
  * Get user dashboard data
  */
 app.get('/user/dashboard', async (req, res) => {
-    var _a, _b, _c;
     try {
-        const uid = req.user.uid;
-        // Get user data and related information
+        const userId = req.user.uid;
         const [userDoc, recentTransactions, recentIncomes, teamStats] = await Promise.all([
-            admin.firestore().collection(config_1.collections.USERS).doc(uid).get(),
+            admin.firestore().collection(config_1.collections.USERS).doc(userId).get(),
             admin.firestore().collection(config_1.collections.TRANSACTIONS)
-                .where('userId', '==', uid)
+                .where('userId', '==', userId)
                 .orderBy('createdAt', 'desc')
                 .limit(5)
                 .get(),
             admin.firestore().collection(config_1.collections.INCOMES)
-                .where('userId', '==', uid)
+                .where('userId', '==', userId)
                 .orderBy('createdAt', 'desc')
                 .limit(5)
                 .get(),
-            // Get team statistics
-            admin.firestore().collection(config_1.collections.USERS)
-                .where('sponsorId', '==', uid)
-                .get()
+            calculateTeamStats(userId, 3) // Only 3 levels for dashboard
         ]);
         if (!userDoc.exists) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
-                error: 'User profile not found'
+                error: 'User not found'
             });
+            return;
         }
         const userData = userDoc.data();
-        // Calculate team statistics
-        const directReferrals = teamStats.size;
-        const activeReferrals = teamStats.docs.filter(doc => doc.data().isActive).length;
-        // Get total team size from user data
-        const totalTeamSize = (userData === null || userData === void 0 ? void 0 : userData.teamSize) || 0;
-        // Calculate income statistics
-        const recentIncomeData = recentIncomes.docs.map(doc => {
-            var _a;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate() }));
-        });
-        const totalIncomeToday = recentIncomeData
-            .filter(income => {
-            const today = new Date();
-            const incomeDate = income.createdAt;
-            return incomeDate &&
-                incomeDate.toDateString() === today.toDateString();
-        })
-            .reduce((sum, income) => sum + (income.amount || 0), 0);
-        // Get recent transactions
-        const recentTxData = recentTransactions.docs.map(doc => {
-            var _a;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate() }));
-        });
-        // Get rank information
-        const rankDoc = await admin.firestore()
-            .collection(config_1.collections.RANKS)
-            .doc((userData === null || userData === void 0 ? void 0 : userData.rank) || 'Inactive')
+        const recentTxData = recentTransactions.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
+        const recentIncomeData = recentIncomes.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
+        // Calculate total incomes for current month
+        const currentMonth = new Date();
+        currentMonth.setDate(1);
+        currentMonth.setHours(0, 0, 0, 0);
+        const monthlyIncomesSnapshot = await admin.firestore()
+            .collection(config_1.collections.INCOMES)
+            .where('userId', '==', userId)
+            .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(currentMonth))
             .get();
-        const rankData = rankDoc.exists ? rankDoc.data() : null;
-        // Calculate next rank progress
-        let nextRankProgress = 0;
-        if (rankData && rankData.nextRank) {
-            const nextRankDoc = await admin.firestore()
-                .collection(config_1.collections.RANKS)
-                .doc(rankData.nextRank)
-                .get();
-            if (nextRankDoc.exists) {
-                const nextRankData = nextRankDoc.data();
-                const currentBV = (userData === null || userData === void 0 ? void 0 : userData.businessVolume) || 0;
-                const requiredBV = ((_a = nextRankData === null || nextRankData === void 0 ? void 0 : nextRankData.requirements) === null || _a === void 0 ? void 0 : _a.businessVolume) || 0;
-                nextRankProgress = requiredBV > 0 ? Math.min((currentBV / requiredBV) * 100, 100) : 0;
-            }
-        }
+        const thisMonthIncome = monthlyIncomesSnapshot.docs.reduce((sum, doc) => {
+            return sum + (doc.data().amount || 0);
+        }, 0);
         res.json({
             success: true,
             data: {
                 user: {
-                    uid,
-                    fullName: userData === null || userData === void 0 ? void 0 : userData.fullName,
-                    email: userData === null || userData === void 0 ? void 0 : userData.email,
-                    userId: userData === null || userData === void 0 ? void 0 : userData.userId,
-                    rank: userData === null || userData === void 0 ? void 0 : userData.rank,
-                    isActive: userData === null || userData === void 0 ? void 0 : userData.isActive,
-                    isVerified: userData === null || userData === void 0 ? void 0 : userData.isVerified,
-                    joinedAt: (_b = userData === null || userData === void 0 ? void 0 : userData.createdAt) === null || _b === void 0 ? void 0 : _b.toDate()
+                    id: userId,
+                    fullName: userData?.fullName,
+                    email: userData?.email,
+                    userId: userData?.userId,
+                    rank: userData?.rank,
+                    isActive: userData?.isActive,
+                    isVerified: userData?.isVerified,
+                    availableBalance: userData?.availableBalance || 0,
+                    totalEarnings: userData?.totalEarnings || 0,
+                    joinedAt: userData?.createdAt?.toDate()
                 },
-                balances: {
-                    available: (userData === null || userData === void 0 ? void 0 : userData.availableBalance) || 0,
-                    total: (userData === null || userData === void 0 ? void 0 : userData.totalEarnings) || 0,
-                    pending: (userData === null || userData === void 0 ? void 0 : userData.pendingBalance) || 0
+                incomes: {
+                    thisMonth: thisMonthIncome,
+                    recent: recentIncomeData
                 },
-                statistics: {
-                    totalIncome: (userData === null || userData === void 0 ? void 0 : userData.totalEarnings) || 0,
-                    todayIncome: totalIncomeToday,
-                    directReferrals,
-                    activeReferrals,
-                    totalTeamSize,
-                    businessVolume: (userData === null || userData === void 0 ? void 0 : userData.businessVolume) || 0
-                },
-                rank: {
-                    current: (userData === null || userData === void 0 ? void 0 : userData.rank) || 'Inactive',
-                    benefits: (rankData === null || rankData === void 0 ? void 0 : rankData.benefits) || {},
-                    nextRank: (rankData === null || rankData === void 0 ? void 0 : rankData.nextRank) || null,
-                    nextRankProgress
-                },
-                recentTransactions: recentTxData,
-                recentIncomes: recentIncomeData
+                transactions: recentTxData,
+                team: {
+                    totalMembers: teamStats.totalMembers,
+                    activeMembers: teamStats.activeMembers,
+                    directReferrals: teamStats.levels[0]?.totalMembers || 0
+                }
             }
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Dashboard fetch failed', error, (_c = req.user) === null || _c === void 0 ? void 0 : _c.uid);
+        await logger.error(logger_1.LogCategory.API, 'User dashboard fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch dashboard data'
@@ -258,58 +275,50 @@ app.get('/user/dashboard', async (req, res) => {
  * Get user profile information
  */
 app.get('/user/profile', async (req, res) => {
-    var _a, _b, _c, _d;
     try {
-        const uid = req.user.uid;
-        const userDoc = await admin.firestore().collection(config_1.collections.USERS).doc(uid).get();
+        const userId = req.user.uid;
+        const userDoc = await admin.firestore()
+            .collection(config_1.collections.USERS)
+            .doc(userId)
+            .get();
         if (!userDoc.exists) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
-                error: 'User profile not found'
+                error: 'User not found'
             });
+            return;
         }
         const userData = userDoc.data();
-        // Get sponsor information if available
-        let sponsorInfo = null;
-        if (userData === null || userData === void 0 ? void 0 : userData.sponsorId) {
+        let sponsorData = null;
+        // Get sponsor information if exists
+        if (userData?.sponsorId) {
             const sponsorDoc = await admin.firestore()
                 .collection(config_1.collections.USERS)
                 .doc(userData.sponsorId)
                 .get();
             if (sponsorDoc.exists) {
-                const sponsorData = sponsorDoc.data();
-                sponsorInfo = {
-                    uid: userData.sponsorId,
-                    fullName: sponsorData === null || sponsorData === void 0 ? void 0 : sponsorData.fullName,
-                    userId: sponsorData === null || sponsorData === void 0 ? void 0 : sponsorData.userId,
-                    email: sponsorData === null || sponsorData === void 0 ? void 0 : sponsorData.email
+                const sponsor = sponsorDoc.data();
+                sponsorData = {
+                    id: userData.sponsorId,
+                    fullName: sponsor?.fullName,
+                    userId: sponsor?.userId,
+                    email: sponsor?.email
                 };
             }
         }
         res.json({
             success: true,
             data: {
-                uid,
-                fullName: userData === null || userData === void 0 ? void 0 : userData.fullName,
-                email: userData === null || userData === void 0 ? void 0 : userData.email,
-                userId: userData === null || userData === void 0 ? void 0 : userData.userId,
-                phone: userData === null || userData === void 0 ? void 0 : userData.phone,
-                dateOfBirth: (_a = userData === null || userData === void 0 ? void 0 : userData.dateOfBirth) === null || _a === void 0 ? void 0 : _a.toDate(),
-                address: userData === null || userData === void 0 ? void 0 : userData.address,
-                bankDetails: userData === null || userData === void 0 ? void 0 : userData.bankDetails,
-                cryptoWallets: userData === null || userData === void 0 ? void 0 : userData.cryptoWallets,
-                rank: userData === null || userData === void 0 ? void 0 : userData.rank,
-                isActive: userData === null || userData === void 0 ? void 0 : userData.isActive,
-                isVerified: userData === null || userData === void 0 ? void 0 : userData.isVerified,
-                sponsor: sponsorInfo,
-                binaryPosition: userData === null || userData === void 0 ? void 0 : userData.binaryPosition,
-                createdAt: (_b = userData === null || userData === void 0 ? void 0 : userData.createdAt) === null || _b === void 0 ? void 0 : _b.toDate(),
-                updatedAt: (_c = userData === null || userData === void 0 ? void 0 : userData.updatedAt) === null || _c === void 0 ? void 0 : _c.toDate()
+                id: userId,
+                ...userData,
+                createdAt: userData?.createdAt?.toDate(),
+                updatedAt: userData?.updatedAt?.toDate(),
+                sponsor: sponsorData
             }
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Profile fetch failed', error, (_d = req.user) === null || _d === void 0 ? void 0 : _d.uid);
+        await logger.error(logger_1.LogCategory.API, 'User profile fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch profile'
@@ -318,32 +327,50 @@ app.get('/user/profile', async (req, res) => {
 });
 /**
  * PUT /user/profile
- * Update user profile information
+ * Update user profile
  */
 app.put('/user/profile', async (req, res) => {
-    var _a;
     try {
-        const uid = req.user.uid;
+        const userId = req.user.uid;
         // Validate input
         const { error, value } = profileUpdateSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 error: 'Validation error',
                 details: error.details[0].message
             });
+            return;
+        }
+        // Check if user exists
+        const userDoc = await admin.firestore()
+            .collection(config_1.collections.USERS)
+            .doc(userId)
+            .get();
+        if (!userDoc.exists) {
+            res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+            return;
         }
         // Update user profile
-        const updateData = Object.assign(Object.assign({}, value), { updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-        await admin.firestore().collection(config_1.collections.USERS).doc(uid).update(updateData);
-        await logger.info(logger_1.LogCategory.API, 'Profile updated', uid, { updates: Object.keys(value) });
+        const updateData = {
+            ...value,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+        await admin.firestore()
+            .collection(config_1.collections.USERS)
+            .doc(userId)
+            .update(updateData);
+        await logger.info(logger_1.LogCategory.API, 'User profile updated', userId, { updates: Object.keys(value) });
         res.json({
             success: true,
             message: 'Profile updated successfully'
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Profile update failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
+        await logger.error(logger_1.LogCategory.API, 'User profile update failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to update profile'
@@ -352,97 +379,66 @@ app.put('/user/profile', async (req, res) => {
 });
 /**
  * GET /user/referral
- * Get referral system information
+ * Get referral information
  */
 app.get('/user/referral', async (req, res) => {
-    var _a, _b, _c, _d, _e;
     try {
-        const uid = req.user.uid;
-        // Get user data
-        const userDoc = await admin.firestore().collection(config_1.collections.USERS).doc(uid).get();
-        if (!userDoc.exists) {
-            return res.status(404).json({
-                success: false,
-                error: 'User profile not found'
-            });
-        }
-        const userData = userDoc.data();
-        // Get direct referrals
-        const directReferralsSnapshot = await admin.firestore()
-            .collection(config_1.collections.USERS)
-            .where('sponsorId', '==', uid)
-            .orderBy('createdAt', 'desc')
-            .get();
-        const directReferrals = directReferralsSnapshot.docs.map(doc => {
-            var _a;
-            const data = doc.data();
-            return {
-                uid: doc.id,
-                fullName: data.fullName,
-                userId: data.userId,
-                email: data.email,
-                rank: data.rank,
-                isActive: data.isActive,
-                joinedAt: (_a = data.createdAt) === null || _a === void 0 ? void 0 : _a.toDate(),
-                businessVolume: data.businessVolume || 0
-            };
-        });
-        // Get binary tree structure (left and right legs)
-        const binaryTree = {
-            left: {
-                count: ((_a = userData === null || userData === void 0 ? void 0 : userData.binaryLeft) === null || _a === void 0 ? void 0 : _a.count) || 0,
-                businessVolume: ((_b = userData === null || userData === void 0 ? void 0 : userData.binaryLeft) === null || _b === void 0 ? void 0 : _b.businessVolume) || 0
-            },
-            right: {
-                count: ((_c = userData === null || userData === void 0 ? void 0 : userData.binaryRight) === null || _c === void 0 ? void 0 : _c.count) || 0,
-                businessVolume: ((_d = userData === null || userData === void 0 ? void 0 : userData.binaryRight) === null || _d === void 0 ? void 0 : _d.businessVolume) || 0
-            }
-        };
-        // Get referral income statistics
-        const referralIncomesSnapshot = await admin.firestore()
-            .collection(config_1.collections.INCOMES)
-            .where('userId', '==', uid)
-            .where('type', 'in', ['referral', 'level'])
-            .orderBy('createdAt', 'desc')
-            .limit(20)
-            .get();
-        const referralIncomes = referralIncomesSnapshot.docs.map(doc => {
-            var _a;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate() }));
-        });
-        // Calculate referral statistics
-        const totalReferralIncome = referralIncomes.reduce((sum, income) => sum + (income.amount || 0), 0);
-        const thisMonthIncome = referralIncomes
-            .filter(income => {
-            const incomeDate = income.createdAt;
-            const now = new Date();
-            return incomeDate &&
-                incomeDate.getMonth() === now.getMonth() &&
-                incomeDate.getFullYear() === now.getFullYear();
-        })
+        const userId = req.user.uid;
+        const [directReferrals, referralIncomes] = await Promise.all([
+            admin.firestore().collection(config_1.collections.USERS)
+                .where('sponsorId', '==', userId)
+                .orderBy('createdAt', 'desc')
+                .get(),
+            admin.firestore().collection(config_1.collections.INCOMES)
+                .where('userId', '==', userId)
+                .where('type', 'in', ['referral', 'level'])
+                .orderBy('createdAt', 'desc')
+                .limit(20)
+                .get()
+        ]);
+        const referralData = directReferrals.docs.map(doc => ({
+            id: doc.id,
+            fullName: doc.data().fullName,
+            email: doc.data().email,
+            userId: doc.data().userId,
+            isActive: doc.data().isActive,
+            rank: doc.data().rank,
+            joinedAt: doc.data().createdAt?.toDate()
+        }));
+        const incomeData = referralIncomes.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
+        // Calculate total referral income
+        const totalReferralIncome = incomeData.reduce((sum, income) => {
+            return sum + (income.amount || 0);
+        }, 0);
+        // Calculate this month's referral income
+        const currentMonth = new Date();
+        currentMonth.setDate(1);
+        currentMonth.setHours(0, 0, 0, 0);
+        const thisMonthIncome = incomeData
+            .filter(income => income.createdAt >= currentMonth)
             .reduce((sum, income) => sum + (income.amount || 0), 0);
-        // Generate referral link
-        const referralLink = `${process.env.FRONTEND_URL || 'https://wayglobe.com'}/signup?ref=${userData === null || userData === void 0 ? void 0 : userData.userId}`;
         res.json({
             success: true,
             data: {
-                referralCode: userData === null || userData === void 0 ? void 0 : userData.userId,
-                referralLink,
-                statistics: {
-                    directReferrals: directReferrals.length,
-                    activeReferrals: directReferrals.filter(ref => ref.isActive).length,
-                    totalTeamSize: (userData === null || userData === void 0 ? void 0 : userData.teamSize) || 0,
-                    totalReferralIncome,
-                    thisMonthIncome
+                directReferrals: {
+                    count: referralData.length,
+                    active: referralData.filter(ref => ref.isActive).length,
+                    list: referralData
                 },
-                binaryTree,
-                directReferrals,
-                recentIncomes: referralIncomes
+                incomes: {
+                    total: totalReferralIncome,
+                    thisMonth: thisMonthIncome,
+                    recent: incomeData
+                }
             }
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Referral data fetch failed', error, (_e = req.user) === null || _e === void 0 ? void 0 : _e.uid);
+        await logger.error(logger_1.LogCategory.API, 'User referral fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch referral data'
@@ -451,18 +447,17 @@ app.get('/user/referral', async (req, res) => {
 });
 /**
  * GET /user/transactions
- * Get user transaction history
+ * Get user transactions
  */
 app.get('/user/transactions', async (req, res) => {
-    var _a;
     try {
-        const uid = req.user.uid;
+        const userId = req.user.uid;
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const type = req.query.type; // 'activation', 'topup', 'withdrawal', 'all'
+        const type = req.query.type; // 'deposit', 'withdrawal', 'activation', 'all'
         let query = admin.firestore()
             .collection(config_1.collections.TRANSACTIONS)
-            .where('userId', '==', uid);
+            .where('userId', '==', userId);
         // Apply type filter
         if (type && type !== 'all') {
             query = query.where('type', '==', type);
@@ -472,16 +467,13 @@ app.get('/user/transactions', async (req, res) => {
             .limit(limit)
             .offset((page - 1) * limit)
             .get();
-        const transactions = snapshot.docs.map(doc => {
-            var _a, _b;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate(), updatedAt: (_b = doc.data().updatedAt) === null || _b === void 0 ? void 0 : _b.toDate() }));
-        });
+        const transactions = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
         // Get total count for pagination
-        const totalSnapshot = await admin.firestore()
-            .collection(config_1.collections.TRANSACTIONS)
-            .where('userId', '==', uid)
-            .count()
-            .get();
+        const totalSnapshot = await query.count().get();
         res.json({
             success: true,
             data: {
@@ -496,135 +488,10 @@ app.get('/user/transactions', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Transaction history fetch failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
+        await logger.error(logger_1.LogCategory.API, 'User transactions fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
-            error: 'Failed to fetch transaction history'
-        });
-    }
-});
-/**
- * GET /user/incomes
- * Get user income history
- */
-app.get('/user/incomes', async (req, res) => {
-    var _a;
-    try {
-        const uid = req.user.uid;
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const type = req.query.type; // 'referral', 'level', 'global', 'retopup', 'all'
-        let query = admin.firestore()
-            .collection(config_1.collections.INCOMES)
-            .where('userId', '==', uid);
-        // Apply type filter
-        if (type && type !== 'all') {
-            query = query.where('type', '==', type);
-        }
-        const snapshot = await query
-            .orderBy('createdAt', 'desc')
-            .limit(limit)
-            .offset((page - 1) * limit)
-            .get();
-        const incomes = snapshot.docs.map(doc => {
-            var _a;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate() }));
-        });
-        // Calculate income statistics
-        const totalIncome = incomes.reduce((sum, income) => sum + (income.amount || 0), 0);
-        const incomeByType = incomes.reduce((acc, income) => {
-            const type = income.type || 'other';
-            acc[type] = (acc[type] || 0) + (income.amount || 0);
-            return acc;
-        }, {});
-        // Get total count for pagination
-        const totalSnapshot = await admin.firestore()
-            .collection(config_1.collections.INCOMES)
-            .where('userId', '==', uid)
-            .count()
-            .get();
-        res.json({
-            success: true,
-            data: {
-                incomes,
-                statistics: {
-                    totalIncome,
-                    incomeByType
-                },
-                pagination: {
-                    page,
-                    limit,
-                    total: totalSnapshot.data().count,
-                    hasMore: totalSnapshot.data().count > page * limit
-                }
-            }
-        });
-    }
-    catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Income history fetch failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch income history'
-        });
-    }
-});
-/**
- * GET /user/withdrawals
- * Get user withdrawal history
- */
-app.get('/user/withdrawals', async (req, res) => {
-    var _a;
-    try {
-        const uid = req.user.uid;
-        const page = parseInt(req.query.page) || 1;
-        const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const snapshot = await admin.firestore()
-            .collection(config_1.collections.WITHDRAWALS)
-            .where('userId', '==', uid)
-            .orderBy('createdAt', 'desc')
-            .limit(limit)
-            .offset((page - 1) * limit)
-            .get();
-        const withdrawals = snapshot.docs.map(doc => {
-            var _a, _b;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate(), updatedAt: (_b = doc.data().updatedAt) === null || _b === void 0 ? void 0 : _b.toDate() }));
-        });
-        // Calculate withdrawal statistics
-        const totalWithdrawn = withdrawals
-            .filter(w => w.status === 'completed')
-            .reduce((sum, w) => sum + (w.amount || 0), 0);
-        const pendingAmount = withdrawals
-            .filter(w => w.status === 'pending')
-            .reduce((sum, w) => sum + (w.amount || 0), 0);
-        // Get total count for pagination
-        const totalSnapshot = await admin.firestore()
-            .collection(config_1.collections.WITHDRAWALS)
-            .where('userId', '==', uid)
-            .count()
-            .get();
-        res.json({
-            success: true,
-            data: {
-                withdrawals,
-                statistics: {
-                    totalWithdrawn,
-                    pendingAmount,
-                    totalRequests: totalSnapshot.data().count
-                },
-                pagination: {
-                    page,
-                    limit,
-                    total: totalSnapshot.data().count,
-                    hasMore: totalSnapshot.data().count > page * limit
-                }
-            }
-        });
-    }
-    catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Withdrawal history fetch failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch withdrawal history'
+            error: 'Failed to fetch transactions'
         });
     }
 });
@@ -633,87 +500,20 @@ app.get('/user/withdrawals', async (req, res) => {
  * Get team structure and statistics
  */
 app.get('/user/team', async (req, res) => {
-    var _a;
     try {
-        const uid = req.user.uid;
-        const level = parseInt(req.query.level) || 1;
-        const maxLevel = Math.min(level, 5); // Limit to 5 levels for performance
-        // Get user data
-        const userDoc = await admin.firestore().collection(config_1.collections.USERS).doc(uid).get();
-        if (!userDoc.exists) {
-            return res.status(404).json({
-                success: false,
-                error: 'User profile not found'
-            });
-        }
-        // Get team members at specified level
-        const getTeamAtLevel = async (parentId, currentLevel) => {
-            if (currentLevel > maxLevel)
-                return [];
-            const snapshot = await admin.firestore()
-                .collection(config_1.collections.USERS)
-                .where('sponsorId', '==', parentId)
-                .orderBy('createdAt', 'desc')
-                .get();
-            const members = await Promise.all(snapshot.docs.map(async (doc) => {
-                var _a;
-                const data = doc.data();
-                const children = currentLevel < maxLevel ? await getTeamAtLevel(doc.id, currentLevel + 1) : [];
-                return {
-                    uid: doc.id,
-                    fullName: data.fullName,
-                    userId: data.userId,
-                    email: data.email,
-                    rank: data.rank,
-                    isActive: data.isActive,
-                    businessVolume: data.businessVolume || 0,
-                    teamSize: data.teamSize || 0,
-                    joinedAt: (_a = data.createdAt) === null || _a === void 0 ? void 0 : _a.toDate(),
-                    level: currentLevel,
-                    children
-                };
-            }));
-            return members;
-        };
-        const teamStructure = await getTeamAtLevel(uid, 1);
-        // Calculate team statistics
-        const calculateTeamStats = (members) => {
-            let totalMembers = 0;
-            let activeMembers = 0;
-            let totalBV = 0;
-            const processMembers = (memberList) => {
-                memberList.forEach(member => {
-                    totalMembers++;
-                    if (member.isActive)
-                        activeMembers++;
-                    totalBV += member.businessVolume || 0;
-                    if (member.children && member.children.length > 0) {
-                        processMembers(member.children);
-                    }
-                });
-            };
-            processMembers(members);
-            return {
-                totalMembers,
-                activeMembers,
-                totalBusinessVolume: totalBV
-            };
-        };
-        const teamStats = calculateTeamStats(teamStructure);
+        const userId = req.user.uid;
+        const level = Math.min(parseInt(req.query.level) || 5, 10); // Max 10 levels
+        const teamStats = await calculateTeamStats(userId, level);
         res.json({
             success: true,
-            data: {
-                teamStructure,
-                statistics: teamStats,
-                level: maxLevel
-            }
+            data: teamStats
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Team structure fetch failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
+        await logger.error(logger_1.LogCategory.API, 'User team fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
-            error: 'Failed to fetch team structure'
+            error: 'Failed to fetch team data'
         });
     }
 });
@@ -727,8 +527,7 @@ app.get('/user/health', (req, res) => {
 });
 // Error handling middleware
 app.use((error, req, res, next) => {
-    var _a;
-    logger.error(logger_1.LogCategory.API, 'Unhandled error in user handlers', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid, { path: req.path, method: req.method });
+    logger.error(logger_1.LogCategory.API, 'Unhandled error in user handlers', error, req.user?.uid, { path: req.path, method: req.method });
     res.status(500).json({
         success: false,
         error: 'Internal server error'

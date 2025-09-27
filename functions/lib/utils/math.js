@@ -109,7 +109,7 @@ exports.getNextRankActivationAmount = getNextRankActivationAmount;
  */
 const calculateGlobalCycleRequirements = (rank) => {
     const rankConfig = config_1.mlmConfig.ranks[rank];
-    const activationAmount = (rankConfig === null || rankConfig === void 0 ? void 0 : rankConfig.activationAmount) || 0;
+    const activationAmount = rankConfig?.activationAmount || 0;
     // Cycle size is 2^10 = 1024 for all ranks
     const cycleSize = config_1.mlmConfig.incomes.global.cycleSize;
     // Required users to complete cycle (all positions filled)

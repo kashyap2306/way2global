@@ -135,7 +135,7 @@ async function checkWithdrawalRateLimit(uid) {
             .get();
         if (rateLimitDoc.exists) {
             const data = rateLimitDoc.data();
-            const attempts = (data === null || data === void 0 ? void 0 : data.attempts) || [];
+            const attempts = data?.attempts || [];
             // Filter attempts within the current window
             const recentAttempts = attempts.filter((timestamp) => timestamp > windowStart);
             if (recentAttempts.length >= config_1.rateLimits.withdrawal.max) {
@@ -174,7 +174,10 @@ async function getUserData(uid) {
         if (!userDoc.exists) {
             throw new functions.https.HttpsError('not-found', 'User not found');
         }
-        return Object.assign({ uid }, userDoc.data());
+        return {
+            uid,
+            ...userDoc.data()
+        };
     }
     catch (error) {
         if (error instanceof functions.https.HttpsError) {
@@ -357,7 +360,7 @@ async function createWithdrawalRequest(userData, withdrawalData, fees, netAmount
                 throw new Error('User not found');
             }
             const currentData = userDoc.data();
-            const currentBalance = (currentData === null || currentData === void 0 ? void 0 : currentData.availableBalance) || 0;
+            const currentBalance = currentData?.availableBalance || 0;
             const totalRequired = withdrawalData.amount + fees.totalFee;
             if (currentBalance < totalRequired) {
                 throw new Error('Insufficient balance');

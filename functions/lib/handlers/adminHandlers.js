@@ -1,6 +1,7 @@
 "use strict";
 /**
  * HTTP Handlers - Admin Operations
+ * Clean implementation with proper TypeScript, Firebase Functions, and Express syntax
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -50,6 +51,7 @@ const Joi = __importStar(require("joi"));
 const logger_1 = require("../utils/logger");
 const config_1 = require("../config");
 const payoutProcessor_1 = require("../services/payoutProcessor");
+// Initialize logger and services
 const logger = (0, logger_1.createLogger)('AdminHandlers');
 const payoutProcessor = new payoutProcessor_1.PayoutProcessor();
 // Create Express app
@@ -75,10 +77,11 @@ const requireAdmin = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Authorization header required'
             });
+            return;
         }
         const idToken = authHeader.split('Bearer ')[1];
         let decodedToken;
@@ -86,17 +89,19 @@ const requireAdmin = async (req, res, next) => {
             decodedToken = await admin.auth().verifyIdToken(idToken);
         }
         catch (tokenError) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Invalid token'
             });
+            return;
         }
         // Check if user has admin role
         if (!decodedToken.admin && !decodedToken.superAdmin) {
-            return res.status(403).json({
+            res.status(403).json({
                 success: false,
                 error: 'Admin access required'
             });
+            return;
         }
         // Add user info to request
         req.user = {
@@ -140,7 +145,6 @@ const settingUpdateSchema = Joi.object({
  * Get admin dashboard statistics
  */
 app.get('/admin/dashboard', async (req, res) => {
-    var _a;
     try {
         const [totalUsers, activeUsers, pendingWithdrawals, totalWithdrawals, recentTransactions] = await Promise.all([
             // Total users count
@@ -164,10 +168,11 @@ app.get('/admin/dashboard', async (req, res) => {
         const totalWithdrawalAmount = totalWithdrawals.docs.reduce((sum, doc) => {
             return sum + (doc.data().amount || 0);
         }, 0);
-        const recentTxData = recentTransactions.docs.map(doc => {
-            var _a;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate() }));
-        });
+        const recentTxData = recentTransactions.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
         res.json({
             success: true,
             data: {
@@ -191,7 +196,7 @@ app.get('/admin/dashboard', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Admin dashboard fetch failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
+        await logger.error(logger_1.LogCategory.API, 'Admin dashboard fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch dashboard data'
@@ -203,7 +208,6 @@ app.get('/admin/dashboard', async (req, res) => {
  * Get paginated list of users
  */
 app.get('/admin/users', async (req, res) => {
-    var _a;
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
@@ -220,19 +224,18 @@ app.get('/admin/users', async (req, res) => {
             .orderBy('createdAt', 'desc')
             .limit(limit * page)
             .get();
-        let users = snapshot.docs.map(doc => {
-            var _a, _b;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate(), updatedAt: (_b = doc.data().updatedAt) === null || _b === void 0 ? void 0 : _b.toDate() }));
-        });
+        let users = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate(),
+            updatedAt: doc.data().updatedAt?.toDate()
+        }));
         // Apply search filter if provided
         if (search) {
             const searchLower = search.toLowerCase();
-            users = users.filter(user => {
-                var _a, _b, _c;
-                return ((_a = user.fullName) === null || _a === void 0 ? void 0 : _a.toLowerCase().includes(searchLower)) ||
-                    ((_b = user.email) === null || _b === void 0 ? void 0 : _b.toLowerCase().includes(searchLower)) ||
-                    ((_c = user.userId) === null || _c === void 0 ? void 0 : _c.toLowerCase().includes(searchLower));
-            });
+            users = users.filter((user) => user.fullName?.toLowerCase().includes(searchLower) ||
+                user.email?.toLowerCase().includes(searchLower) ||
+                user.userId?.toLowerCase().includes(searchLower));
         }
         // Paginate results
         const startIndex = (page - 1) * limit;
@@ -251,7 +254,7 @@ app.get('/admin/users', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Admin users fetch failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
+        await logger.error(logger_1.LogCategory.API, 'Admin users fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch users'
@@ -263,7 +266,6 @@ app.get('/admin/users', async (req, res) => {
  * Get detailed user information
  */
 app.get('/admin/users/:userId', async (req, res) => {
-    var _a, _b, _c;
     try {
         const { userId } = req.params;
         const [userDoc, transactions, withdrawals, incomes] = await Promise.all([
@@ -285,28 +287,37 @@ app.get('/admin/users/:userId', async (req, res) => {
                 .get()
         ]);
         if (!userDoc.exists) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 error: 'User not found'
             });
+            return;
         }
         const userData = userDoc.data();
-        const userTransactions = transactions.docs.map(doc => {
-            var _a;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate() }));
-        });
-        const userWithdrawals = withdrawals.docs.map(doc => {
-            var _a;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate() }));
-        });
-        const userIncomes = incomes.docs.map(doc => {
-            var _a;
-            return (Object.assign(Object.assign({ id: doc.id }, doc.data()), { createdAt: (_a = doc.data().createdAt) === null || _a === void 0 ? void 0 : _a.toDate() }));
-        });
+        const userTransactions = transactions.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
+        const userWithdrawals = withdrawals.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
+        const userIncomes = incomes.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate()
+        }));
         res.json({
             success: true,
             data: {
-                user: Object.assign(Object.assign({ id: userId }, userData), { createdAt: (_a = userData === null || userData === void 0 ? void 0 : userData.createdAt) === null || _a === void 0 ? void 0 : _a.toDate(), updatedAt: (_b = userData === null || userData === void 0 ? void 0 : userData.updatedAt) === null || _b === void 0 ? void 0 : _b.toDate() }),
+                user: {
+                    id: userId,
+                    ...userData,
+                    createdAt: userData?.createdAt?.toDate(),
+                    updatedAt: userData?.updatedAt?.toDate()
+                },
                 transactions: userTransactions,
                 withdrawals: userWithdrawals,
                 incomes: userIncomes
@@ -314,7 +325,7 @@ app.get('/admin/users/:userId', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Admin user detail fetch failed', error, (_c = req.user) === null || _c === void 0 ? void 0 : _c.uid, { targetUserId: req.params.userId });
+        await logger.error(logger_1.LogCategory.API, 'Admin user detail fetch failed', error, req.user?.uid, { targetUserId: req.params.userId });
         res.status(500).json({
             success: false,
             error: 'Failed to fetch user details'
@@ -326,37 +337,42 @@ app.get('/admin/users/:userId', async (req, res) => {
  * Update user information
  */
 app.put('/admin/users/:userId', async (req, res) => {
-    var _a, _b, _c, _d, _e;
     try {
         const { userId } = req.params;
         // Validate input
         const { error, value } = userUpdateSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 error: 'Validation error',
                 details: error.details[0].message
             });
+            return;
         }
         // Check if user exists
         const userDoc = await admin.firestore().collection(config_1.collections.USERS).doc(userId).get();
         if (!userDoc.exists) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 error: 'User not found'
             });
+            return;
         }
         // Update user data
-        const updateData = Object.assign(Object.assign({}, value), { updatedAt: admin.firestore.FieldValue.serverTimestamp(), updatedBy: req.user.uid });
+        const updateData = {
+            ...value,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedBy: req.user.uid
+        };
         await admin.firestore().collection(config_1.collections.USERS).doc(userId).update(updateData);
         // Update Firebase Auth custom claims if needed
         if (value.isActive !== undefined || value.rank !== undefined) {
             const userData = userDoc.data();
             const customClaims = {
-                role: ((_a = value.isActive) !== null && _a !== void 0 ? _a : userData === null || userData === void 0 ? void 0 : userData.isActive) ? 'user' : 'inactive',
-                isActive: (_b = value.isActive) !== null && _b !== void 0 ? _b : userData === null || userData === void 0 ? void 0 : userData.isActive,
-                rank: (_c = value.rank) !== null && _c !== void 0 ? _c : userData === null || userData === void 0 ? void 0 : userData.rank,
-                isVerified: (_d = value.isVerified) !== null && _d !== void 0 ? _d : userData === null || userData === void 0 ? void 0 : userData.isVerified
+                role: value.isActive ?? userData?.isActive ? 'user' : 'inactive',
+                isActive: value.isActive ?? userData?.isActive,
+                rank: value.rank ?? userData?.rank,
+                isVerified: value.isVerified ?? userData?.isVerified
             };
             await admin.auth().setCustomUserClaims(userId, customClaims);
         }
@@ -367,7 +383,7 @@ app.put('/admin/users/:userId', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Admin user update failed', error, (_e = req.user) === null || _e === void 0 ? void 0 : _e.uid, { targetUserId: req.params.userId });
+        await logger.error(logger_1.LogCategory.API, 'Admin user update failed', error, req.user?.uid, { targetUserId: req.params.userId });
         res.status(500).json({
             success: false,
             error: 'Failed to update user'
@@ -379,11 +395,10 @@ app.put('/admin/users/:userId', async (req, res) => {
  * Get paginated list of withdrawal requests
  */
 app.get('/admin/withdrawals', async (req, res) => {
-    var _a;
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = Math.min(parseInt(req.query.limit) || 20, 100);
-        const status = req.query.status; // 'pending', 'approved', 'rejected', 'completed', 'all'
+        const status = req.query.status; // 'pending', 'completed', 'rejected', 'all'
         let query = admin.firestore().collection(config_1.collections.WITHDRAWALS);
         // Apply status filter
         if (status && status !== 'all') {
@@ -394,19 +409,24 @@ app.get('/admin/withdrawals', async (req, res) => {
             .limit(limit)
             .offset((page - 1) * limit)
             .get();
+        // Get user data for each withdrawal
         const withdrawals = await Promise.all(snapshot.docs.map(async (doc) => {
-            var _a, _b, _c, _d, _e;
             const data = doc.data();
-            // Get user info
             const userDoc = await admin.firestore()
                 .collection(config_1.collections.USERS)
                 .doc(data.userId)
                 .get();
-            return Object.assign(Object.assign({ id: doc.id }, data), { createdAt: (_a = data.createdAt) === null || _a === void 0 ? void 0 : _a.toDate(), updatedAt: (_b = data.updatedAt) === null || _b === void 0 ? void 0 : _b.toDate(), user: userDoc.exists ? {
-                    fullName: (_c = userDoc.data()) === null || _c === void 0 ? void 0 : _c.fullName,
-                    email: (_d = userDoc.data()) === null || _d === void 0 ? void 0 : _d.email,
-                    userId: (_e = userDoc.data()) === null || _e === void 0 ? void 0 : _e.userId
-                } : null });
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate(),
+                updatedAt: data.updatedAt?.toDate(),
+                user: userDoc.exists ? {
+                    fullName: userDoc.data()?.fullName,
+                    email: userDoc.data()?.email,
+                    userId: userDoc.data()?.userId
+                } : null
+            };
         }));
         // Get total count for pagination
         const totalSnapshot = await query.count().get();
@@ -424,7 +444,7 @@ app.get('/admin/withdrawals', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Admin withdrawals fetch failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
+        await logger.error(logger_1.LogCategory.API, 'Admin withdrawals fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch withdrawals'
@@ -436,17 +456,17 @@ app.get('/admin/withdrawals', async (req, res) => {
  * Approve or reject withdrawal request
  */
 app.put('/admin/withdrawals/:withdrawalId', async (req, res) => {
-    var _a;
     try {
         const { withdrawalId } = req.params;
         // Validate input
         const { error, value } = withdrawalActionSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 error: 'Validation error',
                 details: error.details[0].message
             });
+            return;
         }
         const { action, notes } = value;
         // Get withdrawal request
@@ -455,66 +475,39 @@ app.put('/admin/withdrawals/:withdrawalId', async (req, res) => {
             .doc(withdrawalId)
             .get();
         if (!withdrawalDoc.exists) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 error: 'Withdrawal request not found'
             });
+            return;
         }
         const withdrawalData = withdrawalDoc.data();
-        if ((withdrawalData === null || withdrawalData === void 0 ? void 0 : withdrawalData.status) !== 'pending') {
-            return res.status(400).json({
+        if (withdrawalData?.status !== 'pending') {
+            res.status(400).json({
                 success: false,
                 error: 'Withdrawal request is not pending'
             });
+            return;
         }
-        await admin.firestore().runTransaction(async (transaction) => {
-            var _a;
-            if (action === 'approve') {
-                // Approve withdrawal - add to payout queue
-                const payoutData = {
-                    userId: withdrawalData === null || withdrawalData === void 0 ? void 0 : withdrawalData.userId,
-                    withdrawalId,
-                    amount: withdrawalData === null || withdrawalData === void 0 ? void 0 : withdrawalData.amount,
-                    method: withdrawalData === null || withdrawalData === void 0 ? void 0 : withdrawalData.method,
-                    details: withdrawalData === null || withdrawalData === void 0 ? void 0 : withdrawalData.details,
-                    status: 'queued',
-                    priority: 'normal',
-                    scheduledAt: admin.firestore.FieldValue.serverTimestamp(),
-                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                    createdBy: req.user.uid,
-                    notes
-                };
-                transaction.set(admin.firestore().collection(config_1.collections.PAYOUT_QUEUE).doc(), payoutData);
-                // Update withdrawal status
-                transaction.update(withdrawalDoc.ref, {
-                    status: 'approved',
-                    approvedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    approvedBy: req.user.uid,
-                    notes,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-            }
-            else if (action === 'reject') {
-                // Reject withdrawal - refund balance
-                const userRef = admin.firestore().collection(config_1.collections.USERS).doc(withdrawalData === null || withdrawalData === void 0 ? void 0 : withdrawalData.userId);
-                const userDoc = await transaction.get(userRef);
-                if (userDoc.exists) {
-                    const currentBalance = ((_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.availableBalance) || 0;
-                    transaction.update(userRef, {
-                        availableBalance: currentBalance + ((withdrawalData === null || withdrawalData === void 0 ? void 0 : withdrawalData.amount) || 0),
-                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                    });
-                }
-                // Update withdrawal status
-                transaction.update(withdrawalDoc.ref, {
-                    status: 'rejected',
-                    rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
-                    rejectedBy: req.user.uid,
-                    notes,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-            }
-        });
+        // Update withdrawal status
+        const updateData = {
+            status: action === 'approve' ? 'completed' : 'rejected',
+            processedAt: admin.firestore.FieldValue.serverTimestamp(),
+            processedBy: req.user.uid,
+            adminNotes: notes
+        };
+        if (action === 'reject') {
+            // Return funds to user balance
+            await admin.firestore().collection(config_1.collections.USERS)
+                .doc(withdrawalData.userId)
+                .update({
+                availableBalance: admin.firestore.FieldValue.increment(withdrawalData.amount)
+            });
+        }
+        await admin.firestore()
+            .collection(config_1.collections.WITHDRAWALS)
+            .doc(withdrawalId)
+            .update(updateData);
         await logger.info(logger_1.LogCategory.API, `Withdrawal ${action}d by admin`, req.user.uid, { withdrawalId, action, notes });
         res.json({
             success: true,
@@ -522,7 +515,7 @@ app.put('/admin/withdrawals/:withdrawalId', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Admin withdrawal action failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid, { withdrawalId: req.params.withdrawalId, action: req.body.action });
+        await logger.error(logger_1.LogCategory.API, `Admin withdrawal ${req.body.action} failed`, error, req.user?.uid, { withdrawalId: req.params.withdrawalId });
         res.status(500).json({
             success: false,
             error: `Failed to ${req.body.action} withdrawal`
@@ -534,7 +527,6 @@ app.put('/admin/withdrawals/:withdrawalId', async (req, res) => {
  * Get system settings
  */
 app.get('/admin/settings', async (req, res) => {
-    var _a;
     try {
         const settingsSnapshot = await admin.firestore()
             .collection(config_1.collections.SETTINGS)
@@ -549,7 +541,7 @@ app.get('/admin/settings', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Admin settings fetch failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
+        await logger.error(logger_1.LogCategory.API, 'Admin settings fetch failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch settings'
@@ -561,16 +553,16 @@ app.get('/admin/settings', async (req, res) => {
  * Update system settings
  */
 app.put('/admin/settings', async (req, res) => {
-    var _a;
     try {
         // Validate input
         const { error, value } = settingUpdateSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 error: 'Validation error',
                 details: error.details[0].message
             });
+            return;
         }
         const { category, key, value: settingValue } = value;
         // Update setting
@@ -589,7 +581,7 @@ app.put('/admin/settings', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Admin setting update failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid, { setting: req.body });
+        await logger.error(logger_1.LogCategory.API, 'Admin setting update failed', error, req.user?.uid, { setting: req.body });
         res.status(500).json({
             success: false,
             error: 'Failed to update setting'
@@ -601,14 +593,14 @@ app.put('/admin/settings', async (req, res) => {
  * Manually trigger payout processing
  */
 app.post('/admin/process-payouts', async (req, res) => {
-    var _a;
     try {
         // Only super admin can trigger manual payout processing
         if (!req.user.isSuperAdmin) {
-            return res.status(403).json({
+            res.status(403).json({
                 success: false,
                 error: 'Super admin access required'
             });
+            return;
         }
         // Process payouts
         const result = await payoutProcessor.processPayoutQueue();
@@ -620,7 +612,7 @@ app.post('/admin/process-payouts', async (req, res) => {
         });
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.API, 'Manual payout processing failed', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid);
+        await logger.error(logger_1.LogCategory.API, 'Manual payout processing failed', error, req.user?.uid);
         res.status(500).json({
             success: false,
             error: 'Failed to process payouts'
@@ -637,8 +629,7 @@ app.get('/admin/health', (req, res) => {
 });
 // Error handling middleware
 app.use((error, req, res, next) => {
-    var _a;
-    logger.error(logger_1.LogCategory.API, 'Unhandled error in admin handlers', error, (_a = req.user) === null || _a === void 0 ? void 0 : _a.uid, { path: req.path, method: req.method });
+    logger.error(logger_1.LogCategory.API, 'Unhandled error in admin handlers', error, req.user?.uid, { path: req.path, method: req.method });
     res.status(500).json({
         success: false,
         error: 'Internal server error'

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.corsHandler = exports.healthCheck = exports.scheduledGlobalCycle = exports.onUserCreated = exports.seedDatabase = exports.claimPayout = exports.requestWithdrawal = exports.createActivation = exports.signup = exports.userHandlers = exports.adminHandlers = exports.authHandlers = void 0;
+exports.corsHandler = exports.healthCheck = exports.scheduledGlobalCycle = exports.onUserCreated = exports.seedDatabase = exports.claimPayout = exports.requestWithdrawal = exports.createActivation = exports.getUserData = exports.login = exports.signup = exports.userHandlers = exports.adminHandlers = exports.authHandlers = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
@@ -48,6 +48,10 @@ Object.defineProperty(exports, "userHandlers", { enumerable: true, get: function
 // Callable Functions
 var signup_1 = require("./callable/signup");
 Object.defineProperty(exports, "signup", { enumerable: true, get: function () { return signup_1.signup; } });
+var login_1 = require("./callable/login");
+Object.defineProperty(exports, "login", { enumerable: true, get: function () { return login_1.login; } });
+var getUserData_1 = require("./callable/getUserData");
+Object.defineProperty(exports, "getUserData", { enumerable: true, get: function () { return getUserData_1.getUserData; } });
 var createActivation_1 = require("./callable/createActivation");
 Object.defineProperty(exports, "createActivation", { enumerable: true, get: function () { return createActivation_1.createActivation; } });
 var requestWithdrawal_1 = require("./callable/requestWithdrawal");

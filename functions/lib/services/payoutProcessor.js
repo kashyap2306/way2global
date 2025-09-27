@@ -105,7 +105,7 @@ class PayoutProcessor {
             throw new Error('User not found');
         }
         const userData = userDoc.data();
-        if (!(userData === null || userData === void 0 ? void 0 : userData.isActive)) {
+        if (!userData?.isActive) {
             throw new Error('User account is not active');
         }
         // Check available balance
@@ -161,7 +161,7 @@ class PayoutProcessor {
                 throw new Error('User not found');
             }
             const userData = userDoc.data();
-            const currentBalance = (userData === null || userData === void 0 ? void 0 : userData.availableBalance) || 0;
+            const currentBalance = userData?.availableBalance || 0;
             if (currentBalance < amount) {
                 throw new Error('Insufficient balance');
             }
@@ -372,7 +372,7 @@ class PayoutProcessor {
                 throw new Error('User not found for refund');
             }
             const userData = userDoc.data();
-            const currentBalance = (userData === null || userData === void 0 ? void 0 : userData.availableBalance) || 0;
+            const currentBalance = userData?.availableBalance || 0;
             const newBalance = currentBalance + amount;
             transaction.update(userRef, {
                 availableBalance: newBalance,
@@ -468,7 +468,7 @@ class PayoutProcessor {
             query = query.startAfter(startAfter);
         }
         const snapshot = await query.get();
-        return snapshot.docs.map(doc => (Object.assign(Object.assign({}, doc.data()), { id: doc.id })));
+        return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     }
     /**
      * Get withdrawal statistics

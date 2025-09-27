@@ -32,7 +32,6 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var _a, _b, _c, _d, _e, _f, _g;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.bcryptRounds = exports.corsOptions = exports.rateLimits = exports.isTest = exports.isProduction = exports.isDevelopment = exports.successMessages = exports.errorCodes = exports.collections = exports.mlmConfig = exports.config = void 0;
 const functions = __importStar(require("firebase-functions"));
@@ -40,23 +39,23 @@ const functions = __importStar(require("firebase-functions"));
 exports.config = {
     // Firebase configuration
     firebase: {
-        projectId: process.env.FIREBASE_PROJECT_ID || ((_a = functions.config().firebase) === null || _a === void 0 ? void 0 : _a.project_id),
+        projectId: process.env.FIREBASE_PROJECT_ID || functions.config().firebase?.project_id,
         region: 'us-central1'
     },
     // Security configuration
     security: {
-        encryptionKey: process.env.ENCRYPTION_KEY || ((_b = functions.config().security) === null || _b === void 0 ? void 0 : _b.encryption_key),
-        jwtSecret: process.env.JWT_SECRET || ((_c = functions.config().security) === null || _c === void 0 ? void 0 : _c.jwt_secret),
+        encryptionKey: process.env.ENCRYPTION_KEY || functions.config().security?.encryption_key,
+        jwtSecret: process.env.JWT_SECRET || functions.config().security?.jwt_secret,
         bcryptRounds: 12
     },
     // External API configuration
     apis: {
         paymentGateway: {
-            apiKey: process.env.PAYMENT_GATEWAY_API_KEY || ((_e = (_d = functions.config().apis) === null || _d === void 0 ? void 0 : _d.payment_gateway) === null || _e === void 0 ? void 0 : _e.api_key),
+            apiKey: process.env.PAYMENT_GATEWAY_API_KEY || functions.config().apis?.payment_gateway?.api_key,
             baseUrl: process.env.PAYMENT_GATEWAY_URL || 'https://api.paymentgateway.com'
         },
         blockchain: {
-            apiKey: process.env.BLOCKCHAIN_API_KEY || ((_g = (_f = functions.config().apis) === null || _f === void 0 ? void 0 : _f.blockchain) === null || _g === void 0 ? void 0 : _g.api_key),
+            apiKey: process.env.BLOCKCHAIN_API_KEY || functions.config().apis?.blockchain?.api_key,
             baseUrl: process.env.BLOCKCHAIN_URL || 'https://api.bscscan.com'
         }
     },

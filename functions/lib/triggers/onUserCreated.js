@@ -102,8 +102,8 @@ async function updateSponsorReferralCount(sponsorUID, newUserUID) {
                 throw new Error(`Sponsor ${sponsorUID} not found`);
             }
             const sponsorData = sponsorDoc.data();
-            const currentDirectReferrals = (sponsorData === null || sponsorData === void 0 ? void 0 : sponsorData.directReferrals) || 0;
-            const currentTeamSize = (sponsorData === null || sponsorData === void 0 ? void 0 : sponsorData.teamSize) || 1;
+            const currentDirectReferrals = sponsorData?.directReferrals || 0;
+            const currentTeamSize = sponsorData?.teamSize || 1;
             transaction.update(sponsorRef, {
                 directReferrals: currentDirectReferrals + 1,
                 teamSize: currentTeamSize + 1,
@@ -131,7 +131,7 @@ async function updateUplineTeamSizes(userUID, levels = 10) {
             if (!userDoc.exists)
                 break;
             const userData = userDoc.data();
-            const sponsorUID = userData === null || userData === void 0 ? void 0 : userData.sponsorUID;
+            const sponsorUID = userData?.sponsorUID;
             if (!sponsorUID)
                 break;
             // Update sponsor's team size
@@ -151,13 +151,12 @@ async function updateUplineTeamSizes(userUID, levels = 10) {
  * Create welcome bonus (if configured)
  */
 async function createWelcomeBonus(userId) {
-    var _a, _b;
     const db = admin.firestore();
     // Check if welcome bonus is enabled in settings
     const settingsDoc = await db.collection(config_1.collections.SETTINGS).doc('system').get();
     const systemSettings = settingsDoc.data();
-    const welcomeBonusEnabled = ((_a = systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.settings) === null || _a === void 0 ? void 0 : _a.welcomeBonusEnabled) || false;
-    const welcomeBonusAmount = ((_b = systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.settings) === null || _b === void 0 ? void 0 : _b.welcomeBonusAmount) || 0;
+    const welcomeBonusEnabled = systemSettings?.settings?.welcomeBonusEnabled || false;
+    const welcomeBonusAmount = systemSettings?.settings?.welcomeBonusAmount || 0;
     if (!welcomeBonusEnabled || welcomeBonusAmount <= 0) {
         return;
     }

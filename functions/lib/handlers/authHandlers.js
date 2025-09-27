@@ -92,13 +92,14 @@ app.post('/auth/login', async (req, res) => {
         // Validate input
         const { error, value } = loginSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 error: 'Validation error',
                 details: error.details[0].message
             });
+            return;
         }
-        const { email, password } = value;
+        const { email } = value;
         await logger.info(logger_1.LogCategory.AUTH, 'Login attempt', undefined, { email, ip: req.ip });
         // Get user by email
         let userRecord;
@@ -107,10 +108,11 @@ app.post('/auth/login', async (req, res) => {
         }
         catch (authError) {
             if (authError.code === 'auth/user-not-found') {
-                return res.status(401).json({
+                res.status(401).json({
                     success: false,
                     error: 'Invalid credentials'
                 });
+                return;
             }
             throw authError;
         }
@@ -120,28 +122,29 @@ app.post('/auth/login', async (req, res) => {
             .doc(userRecord.uid)
             .get();
         if (!userDoc.exists) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'User profile not found'
             });
+            return;
         }
         const userData = userDoc.data();
         // Check if account is disabled
         if (userRecord.disabled) {
-            return res.status(403).json({
+            res.status(403).json({
                 success: false,
                 error: 'Account has been disabled'
             });
+            return;
         }
         // In a real implementation, you would verify the password here
         // For Firebase Auth, password verification is typically done on the client side
         // This endpoint is mainly for additional server-side validation and logging
         // Create custom token with additional claims
         const customClaims = {
-            role: (userData === null || userData === void 0 ? void 0 : userData.isActive) ? 'user' : 'inactive',
-            isActive: (userData === null || userData === void 0 ? void 0 : userData.isActive) || false,
-            rank: (userData === null || userData === void 0 ? void 0 : userData.rank) || 'Inactive',
-            isVerified: (userData === null || userData === void 0 ? void 0 : userData.isVerified) || false
+            role: userData?.status === 'active' ? 'user' : 'inactive',
+            status: userData?.status || 'active',
+            rank: userData?.rank || 'Azurite'
         };
         // Update custom claims
         await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
@@ -165,13 +168,13 @@ app.post('/auth/login', async (req, res) => {
                 customToken,
                 user: {
                     uid: userRecord.uid,
-                    fullName: userData === null || userData === void 0 ? void 0 : userData.fullName,
-                    email: userData === null || userData === void 0 ? void 0 : userData.email,
-                    rank: userData === null || userData === void 0 ? void 0 : userData.rank,
-                    isActive: userData === null || userData === void 0 ? void 0 : userData.isActive,
-                    isVerified: userData === null || userData === void 0 ? void 0 : userData.isVerified,
-                    availableBalance: (userData === null || userData === void 0 ? void 0 : userData.availableBalance) || 0,
-                    totalEarnings: (userData === null || userData === void 0 ? void 0 : userData.totalEarnings) || 0
+                    displayName: userData?.displayName,
+                    email: userData?.email,
+                    rank: userData?.rank,
+                    status: userData?.status,
+                    balance: userData?.balance || 0,
+                    totalEarnings: userData?.totalEarnings || 0,
+                    referrals: userData?.referrals || []
                 }
             }
         });
@@ -183,6 +186,7 @@ app.post('/auth/login', async (req, res) => {
             error: config_1.errorCodes.LOGIN_FAILED,
             message: 'Login failed. Please try again.'
         });
+        return;
     }
 });
 /**
@@ -194,11 +198,12 @@ app.post('/auth/refresh', async (req, res) => {
         // Validate input
         const { error, value } = refreshTokenSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 error: 'Validation error',
                 details: error.details[0].message
             });
+            return;
         }
         const { refreshToken } = value;
         // Verify the refresh token (this would typically be a JWT or session token)
@@ -208,30 +213,29 @@ app.post('/auth/refresh', async (req, res) => {
             decodedToken = await admin.auth().verifyIdToken(refreshToken);
         }
         catch (tokenError) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Invalid refresh token'
             });
+            return;
         }
         const uid = decodedToken.uid;
         // Get fresh user data
-        const [userRecord, userDoc] = await Promise.all([
-            admin.auth().getUser(uid),
-            admin.firestore().collection(config_1.collections.USERS).doc(uid).get()
-        ]);
+        const userDoc = await admin.firestore().collection(config_1.collections.USERS).doc(uid).get();
         if (!userDoc.exists) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 error: 'User profile not found'
             });
+            return;
         }
         const userData = userDoc.data();
         // Update custom claims with fresh data
         const customClaims = {
-            role: (userData === null || userData === void 0 ? void 0 : userData.isActive) ? 'user' : 'inactive',
-            isActive: (userData === null || userData === void 0 ? void 0 : userData.isActive) || false,
-            rank: (userData === null || userData === void 0 ? void 0 : userData.rank) || 'Inactive',
-            isVerified: (userData === null || userData === void 0 ? void 0 : userData.isVerified) || false
+            role: userData?.isActive ? 'user' : 'inactive',
+            isActive: userData?.isActive || false,
+            rank: userData?.rank || 'Inactive',
+            isVerified: userData?.isVerified || false
         };
         await admin.auth().setCustomUserClaims(uid, customClaims);
         // Create new custom token
@@ -245,13 +249,13 @@ app.post('/auth/refresh', async (req, res) => {
                 customToken,
                 user: {
                     uid,
-                    fullName: userData === null || userData === void 0 ? void 0 : userData.fullName,
-                    email: userData === null || userData === void 0 ? void 0 : userData.email,
-                    rank: userData === null || userData === void 0 ? void 0 : userData.rank,
-                    isActive: userData === null || userData === void 0 ? void 0 : userData.isActive,
-                    isVerified: userData === null || userData === void 0 ? void 0 : userData.isVerified,
-                    availableBalance: (userData === null || userData === void 0 ? void 0 : userData.availableBalance) || 0,
-                    totalEarnings: (userData === null || userData === void 0 ? void 0 : userData.totalEarnings) || 0
+                    fullName: userData?.fullName,
+                    email: userData?.email,
+                    rank: userData?.rank,
+                    isActive: userData?.isActive,
+                    isVerified: userData?.isVerified,
+                    availableBalance: userData?.availableBalance || 0,
+                    totalEarnings: userData?.totalEarnings || 0
                 }
             }
         });
@@ -262,6 +266,7 @@ app.post('/auth/refresh', async (req, res) => {
             success: false,
             error: 'Token refresh failed'
         });
+        return;
     }
 });
 /**
@@ -272,10 +277,11 @@ app.post('/auth/logout', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Authorization header required'
             });
+            return;
         }
         const idToken = authHeader.split('Bearer ')[1];
         let decodedToken;
@@ -283,10 +289,11 @@ app.post('/auth/logout', async (req, res) => {
             decodedToken = await admin.auth().verifyIdToken(idToken);
         }
         catch (tokenError) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Invalid token'
             });
+            return;
         }
         const uid = decodedToken.uid;
         // Revoke all refresh tokens for the user
@@ -303,6 +310,7 @@ app.post('/auth/logout', async (req, res) => {
             success: false,
             error: 'Logout failed'
         });
+        return;
     }
 });
 /**
@@ -314,11 +322,12 @@ app.post('/auth/reset-password', async (req, res) => {
         // Validate input
         const { error, value } = resetPasswordSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 error: 'Validation error',
                 details: error.details[0].message
             });
+            return;
         }
         const { email } = value;
         // Check if user exists
@@ -328,10 +337,11 @@ app.post('/auth/reset-password', async (req, res) => {
         catch (authError) {
             if (authError.code === 'auth/user-not-found') {
                 // Don't reveal if email exists or not for security
-                return res.json({
+                res.json({
                     success: true,
                     message: 'If the email exists, a password reset link has been sent.'
                 });
+                return;
             }
             throw authError;
         }
@@ -362,10 +372,11 @@ app.post('/auth/change-password', async (req, res) => {
         // Verify authentication
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Authorization header required'
             });
+            return;
         }
         const idToken = authHeader.split('Bearer ')[1];
         let decodedToken;
@@ -373,21 +384,23 @@ app.post('/auth/change-password', async (req, res) => {
             decodedToken = await admin.auth().verifyIdToken(idToken);
         }
         catch (tokenError) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Invalid token'
             });
+            return;
         }
         // Validate input
         const { error, value } = changePasswordSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 error: 'Validation error',
                 details: error.details[0].message
             });
+            return;
         }
-        const { currentPassword, newPassword } = value;
+        const { newPassword } = value;
         const uid = decodedToken.uid;
         // In a real implementation, you would verify the current password
         // For Firebase Auth, password changes are typically done on the client side
@@ -420,10 +433,11 @@ app.get('/auth/verify-token', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Authorization header required'
             });
+            return;
         }
         const idToken = authHeader.split('Bearer ')[1];
         let decodedToken;
@@ -431,10 +445,11 @@ app.get('/auth/verify-token', async (req, res) => {
             decodedToken = await admin.auth().verifyIdToken(idToken);
         }
         catch (tokenError) {
-            return res.status(401).json({
+            res.status(401).json({
                 success: false,
                 error: 'Invalid token'
             });
+            return;
         }
         const uid = decodedToken.uid;
         // Get user data
@@ -443,10 +458,11 @@ app.get('/auth/verify-token', async (req, res) => {
             .doc(uid)
             .get();
         if (!userDoc.exists) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 error: 'User profile not found'
             });
+            return;
         }
         const userData = userDoc.data();
         res.json({
@@ -456,13 +472,13 @@ app.get('/auth/verify-token', async (req, res) => {
                 email: decodedToken.email,
                 user: {
                     uid,
-                    fullName: userData === null || userData === void 0 ? void 0 : userData.fullName,
-                    email: userData === null || userData === void 0 ? void 0 : userData.email,
-                    rank: userData === null || userData === void 0 ? void 0 : userData.rank,
-                    isActive: userData === null || userData === void 0 ? void 0 : userData.isActive,
-                    isVerified: userData === null || userData === void 0 ? void 0 : userData.isVerified,
-                    availableBalance: (userData === null || userData === void 0 ? void 0 : userData.availableBalance) || 0,
-                    totalEarnings: (userData === null || userData === void 0 ? void 0 : userData.totalEarnings) || 0
+                    fullName: userData?.fullName,
+                    email: userData?.email,
+                    rank: userData?.rank,
+                    isActive: userData?.isActive,
+                    isVerified: userData?.isVerified,
+                    availableBalance: userData?.availableBalance || 0,
+                    totalEarnings: userData?.totalEarnings || 0
                 },
                 claims: decodedToken
             }

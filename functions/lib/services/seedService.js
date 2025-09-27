@@ -260,7 +260,11 @@ class SeedService {
             const batch = admin.firestore().batch();
             ranks.forEach(rank => {
                 const rankRef = admin.firestore().collection(config_1.collections.RANKS).doc(rank.id);
-                batch.set(rankRef, Object.assign(Object.assign({}, rank), { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() }));
+                batch.set(rankRef, {
+                    ...rank,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
             });
             await batch.commit();
             await logger.info(logger_1.LogCategory.SYSTEM, 'Ranks seeded successfully');
@@ -327,7 +331,11 @@ class SeedService {
             const batch = admin.firestore().batch();
             Object.entries(settings).forEach(([category, data]) => {
                 const settingRef = admin.firestore().collection(config_1.collections.SETTINGS).doc(category);
-                batch.set(settingRef, Object.assign(Object.assign({}, data), { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() }));
+                batch.set(settingRef, {
+                    ...data,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
             });
             await batch.commit();
             await logger.info(logger_1.LogCategory.SYSTEM, 'Settings seeded successfully');
@@ -517,15 +525,27 @@ class SeedService {
                         { side: 'root', position: 0 };
                     // Create Firestore document
                     const userRef = admin.firestore().collection(config_1.collections.USERS).doc(user.uid);
-                    batch.set(userRef, Object.assign(Object.assign({}, user), { binaryPosition, binaryLeft: { count: 0, businessVolume: 0 }, binaryRight: { count: 0, businessVolume: 0 }, referralCount: 0, pendingBalance: 0, phone: `+1555${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`, address: {
+                    batch.set(userRef, {
+                        ...user,
+                        binaryPosition,
+                        binaryLeft: { count: 0, businessVolume: 0 },
+                        binaryRight: { count: 0, businessVolume: 0 },
+                        referralCount: 0,
+                        pendingBalance: 0,
+                        phone: `+1555${Math.floor(Math.random() * 1000000).toString().padStart(6, '0')}`,
+                        address: {
                             street: '123 Test Street',
                             city: 'Test City',
                             state: 'Test State',
                             country: 'United States',
                             zipCode: '12345'
-                        }, cryptoWallets: {
+                        },
+                        cryptoWallets: {
                             usdtBep20: `0x${Math.random().toString(16).substr(2, 40)}`
-                        }, createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() }));
+                        },
+                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
                 }
                 catch (authError) {
                     if (authError.code === 'auth/uid-already-exists') {
@@ -549,7 +569,6 @@ class SeedService {
      * Seed test transactions
      */
     async seedTestTransactions(users) {
-        var _a;
         try {
             const batch = admin.firestore().batch();
             let transactionCount = 0;
@@ -560,7 +579,7 @@ class SeedService {
                     userId: user.uid,
                     type: 'activation',
                     rank: user.rank,
-                    amount: ((_a = config_1.mlmConfig.ranks[user.rank]) === null || _a === void 0 ? void 0 : _a.activationAmount) || 100,
+                    amount: config_1.mlmConfig.ranks[user.rank]?.activationAmount || 100,
                     method: 'USDT BEP20',
                     status: 'completed',
                     details: {
@@ -634,7 +653,10 @@ class SeedService {
             const batch = admin.firestore().batch();
             globalCycles.forEach(cycle => {
                 const cycleRef = admin.firestore().collection(config_1.collections.GLOBAL_CYCLES).doc(cycle.id);
-                batch.set(cycleRef, Object.assign(Object.assign({}, cycle), { updatedAt: admin.firestore.FieldValue.serverTimestamp() }));
+                batch.set(cycleRef, {
+                    ...cycle,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
             });
             await batch.commit();
             await logger.info(logger_1.LogCategory.SYSTEM, 'Global cycles seeded successfully');
@@ -682,7 +704,7 @@ class SeedService {
             // Delete Firebase Auth users (test users only)
             const authUsers = await admin.auth().listUsers();
             const testUserUids = authUsers.users
-                .filter(user => { var _a, _b; return ((_a = user.email) === null || _a === void 0 ? void 0 : _a.includes('example.com')) || ((_b = user.email) === null || _b === void 0 ? void 0 : _b.includes('wayglobe.com')); })
+                .filter(user => user.email?.includes('example.com') || user.email?.includes('wayglobe.com'))
                 .map(user => user.uid);
             if (testUserUids.length > 0) {
                 await admin.auth().deleteUsers(testUserUids);

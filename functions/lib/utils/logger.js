@@ -194,8 +194,11 @@ class Logger {
     async logAuth(event, userId, success, metadata) {
         const level = success ? LogLevel.INFO : LogLevel.WARN;
         const message = `Authentication ${event}: ${success ? 'SUCCESS' : 'FAILED'}`;
-        await this.log(level, LogCategory.AUTH, message, userId, Object.assign({ event,
-            success }, metadata));
+        await this.log(level, LogCategory.AUTH, message, userId, {
+            event,
+            success,
+            ...metadata
+        });
     }
     /**
      * Log MLM transactions
@@ -203,8 +206,12 @@ class Logger {
     async logMLMTransaction(type, userId, amount, success, metadata) {
         const level = success ? LogLevel.INFO : LogLevel.ERROR;
         const message = `MLM ${type} transaction: ${success ? 'SUCCESS' : 'FAILED'} - $${amount}`;
-        await this.log(level, LogCategory.MLM, message, userId, Object.assign({ transactionType: type, amount,
-            success }, metadata));
+        await this.log(level, LogCategory.MLM, message, userId, {
+            transactionType: type,
+            amount,
+            success,
+            ...metadata
+        });
     }
     /**
      * Log security events
@@ -226,7 +233,11 @@ class Logger {
                 break;
         }
         const message = `Security event: ${event} (${severity.toUpperCase()})`;
-        await this.log(level, LogCategory.SECURITY, message, userId, Object.assign({ securityEvent: event, severity }, metadata));
+        await this.log(level, LogCategory.SECURITY, message, userId, {
+            securityEvent: event,
+            severity,
+            ...metadata
+        });
         // Also write security events to dedicated collection
         if (severity === 'high' || severity === 'critical') {
             try {
@@ -251,10 +262,13 @@ class Logger {
     async logAPIRequest(method, endpoint, statusCode, duration, userId, metadata) {
         const level = statusCode >= 400 ? LogLevel.ERROR : LogLevel.INFO;
         const message = `API ${method} ${endpoint} - ${statusCode} (${duration}ms)`;
-        await this.log(level, LogCategory.API, message, userId, Object.assign({ method,
+        await this.log(level, LogCategory.API, message, userId, {
+            method,
             endpoint,
             statusCode,
-            duration }, metadata));
+            duration,
+            ...metadata
+        });
     }
     /**
      * Log database operations
@@ -263,10 +277,13 @@ class Logger {
         const level = success ? LogLevel.DEBUG : LogLevel.ERROR;
         const durationText = duration ? ` (${duration}ms)` : '';
         const message = `Database ${operation} on ${collection}: ${success ? 'SUCCESS' : 'FAILED'}${durationText}`;
-        await this.log(level, LogCategory.DATABASE, message, userId, Object.assign({ operation,
+        await this.log(level, LogCategory.DATABASE, message, userId, {
+            operation,
             collection,
             success,
-            duration }, metadata));
+            duration,
+            ...metadata
+        });
     }
     /**
      * Log payment events
@@ -274,9 +291,13 @@ class Logger {
     async logPayment(event, amount, method, success, userId, metadata) {
         const level = success ? LogLevel.INFO : LogLevel.ERROR;
         const message = `Payment ${event}: ${success ? 'SUCCESS' : 'FAILED'} - $${amount} via ${method}`;
-        await this.log(level, LogCategory.PAYMENT, message, userId, Object.assign({ paymentEvent: event, amount,
+        await this.log(level, LogCategory.PAYMENT, message, userId, {
+            paymentEvent: event,
+            amount,
             method,
-            success }, metadata));
+            success,
+            ...metadata
+        });
     }
     /**
      * Create child logger with additional context

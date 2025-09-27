@@ -1,5 +1,6 @@
 /**
  * HTTP Handlers - Admin Operations
+ * Clean implementation with proper TypeScript, Firebase Functions, and Express syntax
  */
 
 import * as functions from 'firebase-functions';
@@ -13,6 +14,7 @@ import { createLogger, LogCategory } from '../utils/logger';
 import { collections, corsOptions, rateLimits } from '../config';
 import { PayoutProcessor } from '../services/payoutProcessor';
 
+// Initialize logger and services
 const logger = createLogger('AdminHandlers');
 const payoutProcessor = new PayoutProcessor();
 
@@ -39,14 +41,15 @@ const adminLimiter = rateLimit({
 app.use('/admin', adminLimiter);
 
 // Admin authentication middleware
-const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Authorization header required'
       });
+      return;
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -55,18 +58,20 @@ const requireAdmin = async (req: express.Request, res: express.Response, next: e
     try {
       decodedToken = await admin.auth().verifyIdToken(idToken);
     } catch (tokenError) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Invalid token'
       });
+      return;
     }
 
     // Check if user has admin role
     if (!decodedToken.admin && !decodedToken.superAdmin) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'Admin access required'
       });
+      return;
     }
 
     // Add user info to request
@@ -87,7 +92,7 @@ const requireAdmin = async (req: express.Request, res: express.Response, next: e
       { ip: req.ip, path: req.path }
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: 'Authentication failed'
     });
@@ -122,7 +127,7 @@ const settingUpdateSchema = Joi.object({
  * GET /admin/dashboard
  * Get admin dashboard statistics
  */
-app.get('/admin/dashboard', async (req, res) => {
+app.get('/admin/dashboard', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const [
       totalUsers,
@@ -206,14 +211,14 @@ app.get('/admin/dashboard', async (req, res) => {
  * GET /admin/users
  * Get paginated list of users
  */
-app.get('/admin/users', async (req, res) => {
+app.get('/admin/users', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const search = req.query.search as string;
     const status = req.query.status as string; // 'active', 'inactive', 'all'
 
-    let query = admin.firestore().collection(collections.USERS);
+    let query: admin.firestore.Query = admin.firestore().collection(collections.USERS);
 
     // Apply filters
     if (status && status !== 'all') {
@@ -280,7 +285,7 @@ app.get('/admin/users', async (req, res) => {
  * GET /admin/users/:userId
  * Get detailed user information
  */
-app.get('/admin/users/:userId', async (req, res) => {
+app.get('/admin/users/:userId', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const { userId } = req.params;
 
@@ -304,10 +309,11 @@ app.get('/admin/users/:userId', async (req, res) => {
     ]);
 
     if (!userDoc.exists) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'User not found'
       });
+      return;
     }
 
     const userData = userDoc.data();
@@ -364,27 +370,29 @@ app.get('/admin/users/:userId', async (req, res) => {
  * PUT /admin/users/:userId
  * Update user information
  */
-app.put('/admin/users/:userId', async (req, res) => {
+app.put('/admin/users/:userId', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const { userId } = req.params;
 
     // Validate input
     const { error, value } = userUpdateSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Validation error',
         details: error.details[0].message
       });
+      return;
     }
 
     // Check if user exists
     const userDoc = await admin.firestore().collection(collections.USERS).doc(userId).get();
     if (!userDoc.exists) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'User not found'
       });
+      return;
     }
 
     // Update user data
@@ -441,13 +449,13 @@ app.put('/admin/users/:userId', async (req, res) => {
  * GET /admin/withdrawals
  * Get paginated list of withdrawal requests
  */
-app.get('/admin/withdrawals', async (req, res) => {
+app.get('/admin/withdrawals', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-    const status = req.query.status as string; // 'pending', 'approved', 'rejected', 'completed', 'all'
+    const status = req.query.status as string; // 'pending', 'completed', 'rejected', 'all'
 
-    let query: FirebaseFirestore.Query = admin.firestore().collection(collections.WITHDRAWALS);
+    let query: admin.firestore.Query = admin.firestore().collection(collections.WITHDRAWALS);
 
     // Apply status filter
     if (status && status !== 'all') {
@@ -460,11 +468,10 @@ app.get('/admin/withdrawals', async (req, res) => {
       .offset((page - 1) * limit)
       .get();
 
+    // Get user data for each withdrawal
     const withdrawals = await Promise.all(
       snapshot.docs.map(async (doc) => {
         const data = doc.data();
-        
-        // Get user info
         const userDoc = await admin.firestore()
           .collection(collections.USERS)
           .doc(data.userId)
@@ -519,18 +526,19 @@ app.get('/admin/withdrawals', async (req, res) => {
  * PUT /admin/withdrawals/:withdrawalId
  * Approve or reject withdrawal request
  */
-app.put('/admin/withdrawals/:withdrawalId', async (req, res) => {
+app.put('/admin/withdrawals/:withdrawalId', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const { withdrawalId } = req.params;
 
     // Validate input
     const { error, value } = withdrawalActionSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Validation error',
         details: error.details[0].message
       });
+      return;
     }
 
     const { action, notes } = value;
@@ -542,75 +550,44 @@ app.put('/admin/withdrawals/:withdrawalId', async (req, res) => {
       .get();
 
     if (!withdrawalDoc.exists) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'Withdrawal request not found'
       });
+      return;
     }
 
     const withdrawalData = withdrawalDoc.data();
 
     if (withdrawalData?.status !== 'pending') {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Withdrawal request is not pending'
       });
+      return;
     }
 
-    await admin.firestore().runTransaction(async (transaction) => {
-      if (action === 'approve') {
-        // Approve withdrawal - add to payout queue
-        const payoutData = {
-          userId: withdrawalData?.userId,
-          withdrawalId,
-          amount: withdrawalData?.amount,
-          method: withdrawalData?.method,
-          details: withdrawalData?.details,
-          status: 'queued',
-          priority: 'normal',
-          scheduledAt: admin.firestore.FieldValue.serverTimestamp(),
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          createdBy: (req as any).user.uid,
-          notes
-        };
+    // Update withdrawal status
+    const updateData: any = {
+      status: action === 'approve' ? 'completed' : 'rejected',
+      processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      processedBy: (req as any).user.uid,
+      adminNotes: notes
+    };
 
-        transaction.set(
-          admin.firestore().collection(collections.PAYOUT_QUEUE).doc(),
-          payoutData
-        );
-
-        // Update withdrawal status
-        transaction.update(withdrawalDoc.ref, {
-          status: 'approved',
-          approvedAt: admin.firestore.FieldValue.serverTimestamp(),
-          approvedBy: (req as any).user.uid,
-          notes,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    if (action === 'reject') {
+      // Return funds to user balance
+      await admin.firestore().collection(collections.USERS)
+        .doc(withdrawalData.userId)
+        .update({
+          availableBalance: admin.firestore.FieldValue.increment(withdrawalData.amount)
         });
+    }
 
-      } else if (action === 'reject') {
-        // Reject withdrawal - refund balance
-        const userRef = admin.firestore().collection(collections.USERS).doc(withdrawalData?.userId);
-        const userDoc = await transaction.get(userRef);
-        
-        if (userDoc.exists) {
-          const currentBalance = userDoc.data()?.availableBalance || 0;
-          transaction.update(userRef, {
-            availableBalance: currentBalance + (withdrawalData?.amount || 0),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-          });
-        }
-
-        // Update withdrawal status
-        transaction.update(withdrawalDoc.ref, {
-          status: 'rejected',
-          rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
-          rejectedBy: (req as any).user.uid,
-          notes,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      }
-    });
+    await admin.firestore()
+      .collection(collections.WITHDRAWALS)
+      .doc(withdrawalId)
+      .update(updateData);
 
     await logger.info(
       LogCategory.API,
@@ -627,13 +604,13 @@ app.put('/admin/withdrawals/:withdrawalId', async (req, res) => {
   } catch (error) {
     await logger.error(
       LogCategory.API,
-      'Admin withdrawal action failed',
+      `Admin withdrawal ${req.body.action} failed`,
       error as Error,
       (req as any).user?.uid,
-      { withdrawalId: req.params.withdrawalId, action: req.body.action }
+      { withdrawalId: req.params.withdrawalId }
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: `Failed to ${req.body.action} withdrawal`
     });
@@ -644,7 +621,7 @@ app.put('/admin/withdrawals/:withdrawalId', async (req, res) => {
  * GET /admin/settings
  * Get system settings
  */
-app.get('/admin/settings', async (req, res) => {
+app.get('/admin/settings', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const settingsSnapshot = await admin.firestore()
       .collection(collections.SETTINGS)
@@ -679,16 +656,17 @@ app.get('/admin/settings', async (req, res) => {
  * PUT /admin/settings
  * Update system settings
  */
-app.put('/admin/settings', async (req, res) => {
+app.put('/admin/settings', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     // Validate input
     const { error, value } = settingUpdateSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Validation error',
         details: error.details[0].message
       });
+      return;
     }
 
     const { category, key, value: settingValue } = value;
@@ -724,7 +702,7 @@ app.put('/admin/settings', async (req, res) => {
       { setting: req.body }
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: 'Failed to update setting'
     });
@@ -735,14 +713,15 @@ app.put('/admin/settings', async (req, res) => {
  * POST /admin/process-payouts
  * Manually trigger payout processing
  */
-app.post('/admin/process-payouts', async (req, res) => {
+app.post('/admin/process-payouts', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     // Only super admin can trigger manual payout processing
     if (!(req as any).user.isSuperAdmin) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'Super admin access required'
       });
+      return;
     }
 
     // Process payouts
@@ -769,7 +748,7 @@ app.post('/admin/process-payouts', async (req, res) => {
       (req as any).user?.uid
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: 'Failed to process payouts'
     });
@@ -777,7 +756,7 @@ app.post('/admin/process-payouts', async (req, res) => {
 });
 
 // Health check endpoint
-app.get('/admin/health', (req, res) => {
+app.get('/admin/health', (req: express.Request, res: express.Response): void => {
   res.json({
     success: true,
     message: 'Admin service is healthy',
@@ -786,7 +765,7 @@ app.get('/admin/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction): void => {
   logger.error(
     LogCategory.API,
     'Unhandled error in admin handlers',

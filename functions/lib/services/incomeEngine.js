@@ -227,7 +227,7 @@ class IncomeEngine {
             if (!userDoc.exists)
                 break;
             const userData = userDoc.data();
-            const sponsorUID = userData === null || userData === void 0 ? void 0 : userData.sponsorUID;
+            const sponsorUID = userData?.sponsorUID;
             if (!sponsorUID)
                 break;
             uplineChain.push(sponsorUID);
@@ -243,15 +243,14 @@ class IncomeEngine {
         if (!userDoc.exists)
             return false;
         const userData = userDoc.data();
-        return (userData === null || userData === void 0 ? void 0 : userData.isActive) === true && (userData === null || userData === void 0 ? void 0 : userData.currentRank);
+        return userData?.isActive === true && userData?.currentRank;
     }
     /**
      * Check if user is eligible for global income
      */
     async checkGlobalIncomeEligibility(userUID, rank) {
-        var _a;
         const rankConfig = config_1.mlmConfig.ranks[rank];
-        return ((_a = rankConfig === null || rankConfig === void 0 ? void 0 : rankConfig.benefits) === null || _a === void 0 ? void 0 : _a.globalIncome) === true;
+        return rankConfig?.benefits?.globalIncome === true;
     }
     /**
      * Add user to global cycle
@@ -278,12 +277,12 @@ class IncomeEngine {
                 completedAt: null
             };
             cycleDoc = await this.db.collection(config_1.collections.GLOBAL_CYCLES).add(newCycleData);
-            cycleData = Object.assign(Object.assign({}, newCycleData), { id: cycleDoc.id });
+            cycleData = { ...newCycleData, id: cycleDoc.id };
         }
         else {
             // Add to existing cycle
             cycleDoc = activeCycleQuery.docs[0];
-            cycleData = Object.assign(Object.assign({}, cycleDoc.data()), { id: cycleDoc.id });
+            cycleData = { ...cycleDoc.data(), id: cycleDoc.id };
             // Add user to participants
             await cycleDoc.ref.update({
                 participants: admin.firestore.FieldValue.arrayUnion(userUID)
@@ -447,7 +446,7 @@ class IncomeEngine {
             // Get user's sponsor
             const userDoc = await this.db.collection(config_1.collections.USERS).doc(activatorUID).get();
             const userData = userDoc.data();
-            const sponsorUID = userData === null || userData === void 0 ? void 0 : userData.sponsorUID;
+            const sponsorUID = userData?.sponsorUID;
             // Process referral/re-topup income
             if (sponsorUID) {
                 if (isReTopup) {
@@ -485,8 +484,8 @@ class IncomeEngine {
                 throw new Error(`User ${userUID} not found`);
             }
             const userData = userDoc.data();
-            const currentBalance = (userData === null || userData === void 0 ? void 0 : userData.availableBalance) || 0;
-            const totalEarnings = (userData === null || userData === void 0 ? void 0 : userData.totalEarnings) || 0;
+            const currentBalance = userData?.availableBalance || 0;
+            const totalEarnings = userData?.totalEarnings || 0;
             let newBalance;
             let newTotalEarnings;
             if (operation === 'add') {

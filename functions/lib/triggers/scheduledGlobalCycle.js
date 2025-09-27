@@ -206,8 +206,8 @@ async function createGlobalIncome(uid, amount, level, rank, cycleId) {
                 throw new Error(`User ${uid} not found`);
             }
             const userData = userDoc.data();
-            const currentBalance = (userData === null || userData === void 0 ? void 0 : userData.availableBalance) || 0;
-            const totalEarnings = (userData === null || userData === void 0 ? void 0 : userData.totalEarnings) || 0;
+            const currentBalance = userData?.availableBalance || 0;
+            const totalEarnings = userData?.totalEarnings || 0;
             transaction.update(userRef, {
                 availableBalance: currentBalance + amount,
                 totalEarnings: totalEarnings + amount,
@@ -363,9 +363,8 @@ async function cleanupOldData() {
  * Manual trigger for global cycle processing (for testing)
  */
 exports.triggerGlobalCycleProcessing = functions.https.onCall(async (data, context) => {
-    var _a, _b, _c;
     // Verify admin access
-    if (!((_b = (_a = context.auth) === null || _a === void 0 ? void 0 : _a.token) === null || _b === void 0 ? void 0 : _b.admin)) {
+    if (!context.auth?.token?.admin) {
         throw new functions.https.HttpsError('permission-denied', 'Only admins can trigger global cycle processing');
     }
     try {
@@ -379,7 +378,7 @@ exports.triggerGlobalCycleProcessing = functions.https.onCall(async (data, conte
         };
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.SYSTEM, 'Manual global cycle processing failed', error, (_c = context.auth) === null || _c === void 0 ? void 0 : _c.uid);
+        await logger.error(logger_1.LogCategory.SYSTEM, 'Manual global cycle processing failed', error, context.auth?.uid);
         throw new functions.https.HttpsError('internal', 'Failed to process global cycles', error);
     }
 });

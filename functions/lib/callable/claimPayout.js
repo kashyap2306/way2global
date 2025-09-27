@@ -109,7 +109,7 @@ async function checkClaimRateLimit(uid) {
             .get();
         if (rateLimitDoc.exists) {
             const data = rateLimitDoc.data();
-            const attempts = (data === null || data === void 0 ? void 0 : data.attempts) || [];
+            const attempts = data?.attempts || [];
             // Filter attempts within the current window
             const recentAttempts = attempts.filter((timestamp) => timestamp > windowStart);
             if (recentAttempts.length >= config_1.rateLimits.general.max) {
@@ -148,7 +148,10 @@ async function getUserData(uid) {
         if (!userDoc.exists) {
             throw new functions.https.HttpsError('not-found', 'User not found');
         }
-        return Object.assign({ uid }, userDoc.data());
+        return {
+            uid,
+            ...userDoc.data()
+        };
     }
     catch (error) {
         if (error instanceof functions.https.HttpsError) {
@@ -173,7 +176,6 @@ async function validateUser(userData, password) {
  * Get payout data and validate ownership
  */
 async function getPayoutData(payoutId, uid) {
-    var _a;
     const db = admin.firestore();
     try {
         const payoutDoc = await db.collection(config_1.collections.PAYOUT_QUEUE).doc(payoutId).get();
@@ -182,20 +184,23 @@ async function getPayoutData(payoutId, uid) {
         }
         const payoutData = payoutDoc.data();
         // Verify ownership
-        if ((payoutData === null || payoutData === void 0 ? void 0 : payoutData.uid) !== uid) {
+        if (payoutData?.uid !== uid) {
             throw new functions.https.HttpsError('permission-denied', 'You can only claim your own payouts');
         }
         // Check payout status
-        if ((payoutData === null || payoutData === void 0 ? void 0 : payoutData.status) !== 'ready') {
-            throw new functions.https.HttpsError('failed-precondition', `Payout is not ready for claim. Current status: ${payoutData === null || payoutData === void 0 ? void 0 : payoutData.status}`);
+        if (payoutData?.status !== 'ready') {
+            throw new functions.https.HttpsError('failed-precondition', `Payout is not ready for claim. Current status: ${payoutData?.status}`);
         }
         // Check if payout is expired
         const now = new Date();
-        const expiresAt = (_a = payoutData === null || payoutData === void 0 ? void 0 : payoutData.expiresAt) === null || _a === void 0 ? void 0 : _a.toDate();
+        const expiresAt = payoutData?.expiresAt?.toDate();
         if (expiresAt && now > expiresAt) {
             throw new functions.https.HttpsError('failed-precondition', 'Payout has expired and can no longer be claimed');
         }
-        return Object.assign({ id: payoutId }, payoutData);
+        return {
+            id: payoutId,
+            ...payoutData
+        };
     }
     catch (error) {
         if (error instanceof functions.https.HttpsError) {
@@ -218,8 +223,8 @@ async function processPayoutClaim(userData, payoutData) {
                 throw new Error('User not found');
             }
             const currentUserData = userDoc.data();
-            const currentBalance = (currentUserData === null || currentUserData === void 0 ? void 0 : currentUserData.availableBalance) || 0;
-            const totalEarnings = (currentUserData === null || currentUserData === void 0 ? void 0 : currentUserData.totalEarnings) || 0;
+            const currentBalance = currentUserData?.availableBalance || 0;
+            const totalEarnings = currentUserData?.totalEarnings || 0;
             // Get fresh payout data
             const payoutRef = db.collection(config_1.collections.PAYOUT_QUEUE).doc(payoutData.id);
             const payoutDoc = await transaction.get(payoutRef);
@@ -228,10 +233,10 @@ async function processPayoutClaim(userData, payoutData) {
             }
             const currentPayoutData = payoutDoc.data();
             // Double-check payout status
-            if ((currentPayoutData === null || currentPayoutData === void 0 ? void 0 : currentPayoutData.status) !== 'ready') {
-                throw new Error(`Payout is not ready for claim. Status: ${currentPayoutData === null || currentPayoutData === void 0 ? void 0 : currentPayoutData.status}`);
+            if (currentPayoutData?.status !== 'ready') {
+                throw new Error(`Payout is not ready for claim. Status: ${currentPayoutData?.status}`);
             }
-            const claimedAmount = (currentPayoutData === null || currentPayoutData === void 0 ? void 0 : currentPayoutData.amount) || 0;
+            const claimedAmount = currentPayoutData?.amount || 0;
             const newBalance = currentBalance + claimedAmount;
             // Update user balance
             transaction.update(userRef, {
@@ -302,7 +307,6 @@ exports.getUserPayouts = functions.https.onCall(async (data, context) => {
             .limit(50)
             .get();
         const payouts = payoutsQuery.docs.map(doc => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
             const data = doc.data();
             return {
                 id: doc.id,
@@ -312,16 +316,16 @@ exports.getUserPayouts = functions.https.onCall(async (data, context) => {
                 rank: data.rank || 'azurite',
                 priority: data.priority || 1,
                 status: data.status || 'pending',
-                scheduledAt: (_b = (_a = data.scheduledAt) === null || _a === void 0 ? void 0 : _a.toDate()) === null || _b === void 0 ? void 0 : _b.toISOString(),
-                processedAt: (_d = (_c = data.processedAt) === null || _c === void 0 ? void 0 : _c.toDate()) === null || _d === void 0 ? void 0 : _d.toISOString(),
+                scheduledAt: data.scheduledAt?.toDate()?.toISOString(),
+                processedAt: data.processedAt?.toDate()?.toISOString(),
                 failureReason: data.failureReason || null,
                 retryCount: data.retryCount || 0,
                 maxRetries: data.maxRetries || 3,
                 batchId: data.batchId || null,
                 metadata: data.metadata || {},
-                createdAt: (_f = (_e = data.createdAt) === null || _e === void 0 ? void 0 : _e.toDate()) === null || _f === void 0 ? void 0 : _f.toISOString(),
-                expiresAt: (_h = (_g = data.expiresAt) === null || _g === void 0 ? void 0 : _g.toDate()) === null || _h === void 0 ? void 0 : _h.toISOString(),
-                claimedAt: (_k = (_j = data.claimedAt) === null || _j === void 0 ? void 0 : _j.toDate()) === null || _k === void 0 ? void 0 : _k.toISOString()
+                createdAt: data.createdAt?.toDate()?.toISOString(),
+                expiresAt: data.expiresAt?.toDate()?.toISOString(),
+                claimedAt: data.claimedAt?.toDate()?.toISOString()
             };
         });
         // Calculate totals

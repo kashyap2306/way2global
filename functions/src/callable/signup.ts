@@ -5,30 +5,38 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as Joi from 'joi';
-import { createLogger, LogCategory } from '../utils/logger';
+
+import { logger, LogCategory } from '../utils/logger';
 import { collections, errorCodes, successMessages, rateLimits } from '../config';
+import { initializeGlobalCollections } from '../services/collectionInitializer';
+import { createAllUserDocuments, checkUserDocumentsExist } from '../services/userSignupService';
 
-const logger = createLogger('SignupCallable');
-
-// Validation schema
+// Enhanced validation schema for MLM platform
 const signupSchema = Joi.object({
-  fullName: Joi.string().min(2).max(50).required(),
-  email: Joi.string().email().required(),
-  contact: Joi.string().min(10).max(15).required(),
+  email: Joi.string().email().pattern(/^[a-zA-Z0-9._%+-]+@gmail\.com$/).required()
+    .messages({
+      'string.pattern.base': 'Only Gmail addresses are allowed'
+    }),
   password: Joi.string().min(6).max(128).required(),
-  walletAddress: Joi.string().min(20).max(100).required(),
-  sponsorUID: Joi.string().optional().allow(''),
-  placement: Joi.string().valid('left', 'right').optional().default('left')
+  displayName: Joi.string().min(2).max(50).required(),
+  phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required()
+    .messages({
+      'string.pattern.base': 'Invalid phone number format'
+    }),
+  walletAddress: Joi.string().pattern(/^0x[a-fA-F0-9]{40}$/).required()
+    .messages({
+      'string.pattern.base': 'Invalid USDT BEP20 wallet address'
+    }),
+  sponsorId: Joi.string().optional().allow('', null)
 });
 
 interface SignupData {
-  fullName: string;
   email: string;
-  contact: string;
   password: string;
+  displayName: string;
+  phone: string;
   walletAddress: string;
-  sponsorUID?: string;
-  placement?: 'left' | 'right';
+  sponsorId?: string;
 }
 
 interface SignupResponse {
@@ -62,23 +70,40 @@ export const signup = functions.https.onCall(async (data: SignupData, context): 
       LogCategory.AUTH,
       'User signup attempt',
       undefined,
-      { email: validatedData.email, sponsorUID: validatedData.sponsorUID }
+      { email: validatedData.email, sponsorId: validatedData.sponsorId }
     );
 
     // Check if user already exists
-    await checkExistingUser(validatedData.email, validatedData.contact, validatedData.walletAddress);
+    await checkExistingUser(validatedData.email, validatedData.phone, validatedData.walletAddress);
 
     // Validate sponsor if provided
     let sponsorData = null;
-    if (validatedData.sponsorUID) {
-      sponsorData = await validateSponsor(validatedData.sponsorUID);
+    if (validatedData.sponsorId) {
+      sponsorData = await validateSponsor(validatedData.sponsorId);
     }
 
     // Create Firebase Auth user
     const userRecord = await createAuthUser(validatedData);
 
-    // Create user document in Firestore
-    const userData = await createUserDocument(userRecord.uid, validatedData, sponsorData);
+    // Check if user documents already exist (prevent duplicates)
+    const documentsExist = await checkUserDocumentsExist(userRecord.uid);
+    if (documentsExist) {
+      throw new functions.https.HttpsError(
+        'already-exists',
+        'User documents already exist'
+      );
+    }
+
+    // Create all user documents with comprehensive system
+    await createAllUserDocuments(userRecord.uid, validatedData, validatedData.sponsorId);
+
+    // Initialize global collections (if not already done)
+    await initializeGlobalCollections();
+
+    // Update sponsor's referrals array if sponsor exists
+    if (sponsorData && validatedData.sponsorId) {
+      await updateSponsorReferrals(validatedData.sponsorId, userRecord.uid);
+    }
 
     // Generate custom token for immediate login
     const customToken = await admin.auth().createCustomToken(userRecord.uid);
@@ -87,7 +112,7 @@ export const signup = functions.https.onCall(async (data: SignupData, context): 
       LogCategory.AUTH,
       'User signup successful',
       userRecord.uid,
-      { email: validatedData.email, sponsorUID: validatedData.sponsorUID }
+      { email: validatedData.email, sponsorId: validatedData.sponsorId }
     );
 
     return {
@@ -96,21 +121,21 @@ export const signup = functions.https.onCall(async (data: SignupData, context): 
       uid: userRecord.uid,
       customToken,
       userData: {
-        fullName: userData.fullName,
-        email: userData.email,
-        rank: userData.rank,
-        isActive: userData.isActive,
-        sponsorUID: userData.sponsorUID
+        uid: userRecord.uid,
+        displayName: validatedData.displayName,
+        email: validatedData.email,
+        rank: 'Azurite',
+        status: 'active'
       }
     };
 
-  } catch (error) {
+  } catch (error: any) {
     await logger.error(
       LogCategory.AUTH,
       'User signup failed',
-      error as Error,
+      error,
       undefined,
-      { email: data.email }
+      { email: data.email, sponsorId: data.sponsorId }
     );
 
     if (error instanceof functions.https.HttpsError) {
@@ -120,7 +145,7 @@ export const signup = functions.https.onCall(async (data: SignupData, context): 
     throw new functions.https.HttpsError(
       'internal',
       errorCodes.SIGNUP_FAILED,
-      error
+      error.message
     );
   }
 });
@@ -166,7 +191,6 @@ async function checkRateLimit(ip: string): Promise<void> {
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
     }
-
   } catch (error) {
     if (error instanceof functions.https.HttpsError) {
       throw error;
@@ -234,13 +258,13 @@ async function checkExistingUser(email: string, contact: string, walletAddress: 
 }
 
 /**
- * Validate sponsor UID and return sponsor data
+ * Validate sponsor ID and return sponsor data
  */
-async function validateSponsor(sponsorUID: string): Promise<any> {
+async function validateSponsor(sponsorId: string): Promise<any> {
   const db = admin.firestore();
 
   try {
-    const sponsorDoc = await db.collection(collections.USERS).doc(sponsorUID).get();
+    const sponsorDoc = await db.collection(collections.USERS).doc(sponsorId).get();
 
     if (!sponsorDoc.exists) {
       throw new functions.https.HttpsError(
@@ -251,7 +275,7 @@ async function validateSponsor(sponsorUID: string): Promise<any> {
 
     const sponsorData = sponsorDoc.data();
 
-    if (!sponsorData?.isActive) {
+    if (sponsorData?.status !== 'active') {
       throw new functions.https.HttpsError(
         'failed-precondition',
         'Sponsor account is not active'
@@ -283,16 +307,16 @@ async function createAuthUser(userData: SignupData): Promise<admin.auth.UserReco
     const userRecord = await admin.auth().createUser({
       email: userData.email,
       password: userData.password,
-      displayName: userData.fullName,
+      displayName: userData.displayName,
       emailVerified: false,
       disabled: false
     });
 
-    // Set custom claims
+    // Set custom claims for MLM platform
     await admin.auth().setCustomUserClaims(userRecord.uid, {
       role: 'user',
-      isActive: false,
-      rank: 'Inactive'
+      status: 'active',
+      rank: 'Azurite'
     });
 
     return userRecord;
@@ -306,222 +330,21 @@ async function createAuthUser(userData: SignupData): Promise<admin.auth.UserReco
   }
 }
 
-/**
- * Create user document in Firestore
- */
-async function createUserDocument(
-  uid: string,
-  userData: SignupData,
-  sponsorData: any
-): Promise<any> {
-  const db = admin.firestore();
 
+
+/**
+ * Update sponsor's referrals array
+ */
+async function updateSponsorReferrals(sponsorId: string, newUserId: string): Promise<void> {
+  const db = admin.firestore();
+  
   try {
-    // Find placement position in binary tree
-    const placement = await findPlacementPosition(sponsorData?.uid, userData.placement);
-
-    const userDocData = {
-      uid,
-      fullName: userData.fullName,
-      email: userData.email,
-      contact: userData.contact,
-      walletAddress: userData.walletAddress,
-      sponsorUID: sponsorData?.uid || null,
-      uplineUID: placement.uplineUID,
-      position: placement.position,
-      level: placement.level,
-      
-      // MLM Structure
-      leftChild: null,
-      rightChild: null,
-      leftCount: 0,
-      rightCount: 0,
-      teamSize: 0,
-      businessVolume: 0,
-      
-      // Status
-      rank: 'Inactive',
-      isActive: false,
-      isVerified: false,
-      
-      // Balances
-      availableBalance: 0,
-      totalEarnings: 0,
-      totalWithdrawals: 0,
-      
-      // Timestamps
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      lastLoginAt: null,
-      
-      // Metadata
-      signupIP: null, // Will be set by client
-      referralCode: generateReferralCode(uid),
-      metadata: {
-        signupSource: 'web',
-        hasCompletedProfile: false
-      }
-    };
-
-    await db.collection(collections.USERS).doc(uid).set(userDocData);
-
-    return {
-      ...userDocData
-    };
-
+    await db.collection(collections.USERS).doc(sponsorId).update({
+      referrals: admin.firestore.FieldValue.arrayUnion(newUserId),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
   } catch (error) {
-    // Clean up Auth user if Firestore creation fails
-    try {
-      await admin.auth().deleteUser(uid);
-    } catch (cleanupError) {
-      await logger.error(
-        LogCategory.AUTH,
-        'Failed to cleanup Auth user after Firestore error',
-        cleanupError as Error,
-        uid
-      );
-    }
-
-    throw new functions.https.HttpsError(
-      'internal',
-      'Failed to create user profile',
-      error
-    );
+    await logger.error(LogCategory.SYSTEM, 'Failed to update sponsor referrals', error as Error);
+    // Don't throw error as this is not critical for signup
   }
-}
-
-/**
- * Find placement position in binary tree
- */
-async function findPlacementPosition(
-  sponsorUID: string | null,
-  preferredPosition: 'left' | 'right' = 'left'
-): Promise<{ uplineUID: string | null; position: 'left' | 'right' | null; level: number }> {
-  if (!sponsorUID) {
-    return {
-      uplineUID: null,
-      position: null,
-      level: 1
-    };
-  }
-
-  const db = admin.firestore();
-
-  try {
-    // Get sponsor data
-    const sponsorDoc = await db.collection(collections.USERS).doc(sponsorUID).get();
-    if (!sponsorDoc.exists) {
-      throw new Error('Sponsor not found');
-    }
-
-    const sponsorData = sponsorDoc.data();
-    const sponsorLevel = sponsorData?.level || 1;
-
-    // Check if sponsor has available positions
-    if (!sponsorData?.leftChild && preferredPosition === 'left') {
-      return {
-        uplineUID: sponsorUID,
-        position: 'left',
-        level: sponsorLevel + 1
-      };
-    }
-
-    if (!sponsorData?.rightChild && preferredPosition === 'right') {
-      return {
-        uplineUID: sponsorUID,
-        position: 'right',
-        level: sponsorLevel + 1
-      };
-    }
-
-    if (!sponsorData?.leftChild) {
-      return {
-        uplineUID: sponsorUID,
-        position: 'left',
-        level: sponsorLevel + 1
-      };
-    }
-
-    if (!sponsorData?.rightChild) {
-      return {
-        uplineUID: sponsorUID,
-        position: 'right',
-        level: sponsorLevel + 1
-      };
-    }
-
-    // Both positions taken, find next available position in the tree
-    return await findNextAvailablePosition(sponsorUID, sponsorLevel + 1);
-
-  } catch (error) {
-    throw new functions.https.HttpsError(
-      'internal',
-      'Failed to find placement position',
-      error
-    );
-  }
-}
-
-/**
- * Find next available position in the binary tree
- */
-async function findNextAvailablePosition(
-  rootUID: string,
-  startLevel: number
-): Promise<{ uplineUID: string; position: 'left' | 'right'; level: number }> {
-  const db = admin.firestore();
-  
-  // BFS to find next available position
-  const queue = [{ uid: rootUID, level: startLevel - 1 }];
-  
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    
-    const userDoc = await db.collection(collections.USERS).doc(current.uid).get();
-    if (!userDoc.exists) continue;
-    
-    const userData = userDoc.data();
-    
-    // Check if this user has available positions
-    if (!userData?.leftChild) {
-      return {
-        uplineUID: current.uid,
-        position: 'left',
-        level: current.level + 1
-      };
-    }
-    
-    if (!userData?.rightChild) {
-      return {
-        uplineUID: current.uid,
-        position: 'right',
-        level: current.level + 1
-      };
-    }
-    
-    // Add children to queue for next level search
-    if (userData.leftChild) {
-      queue.push({ uid: userData.leftChild, level: current.level + 1 });
-    }
-    if (userData.rightChild) {
-      queue.push({ uid: userData.rightChild, level: current.level + 1 });
-    }
-  }
-  
-  // Fallback - should not reach here in normal circumstances
-  return {
-    uplineUID: rootUID,
-    position: 'left',
-    level: startLevel
-  };
-}
-
-/**
- * Generate unique referral code
- */
-function generateReferralCode(uid: string): string {
-  const prefix = 'WG';
-  const suffix = uid.substring(0, 6).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}${suffix}${random}`;
 }

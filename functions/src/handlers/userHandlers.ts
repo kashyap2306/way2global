@@ -1,5 +1,6 @@
 /**
- * HTTP Handlers - User Features
+ * HTTP Handlers - User Operations
+ * Clean implementation with proper TypeScript, Firebase Functions, and Express syntax
  */
 
 import * as functions from 'firebase-functions';
@@ -10,9 +11,9 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import * as Joi from 'joi';
 import { createLogger, LogCategory } from '../utils/logger';
-import { collections, errorCodes, successMessages, corsOptions, rateLimits } from '../config';
-import { calculateBinaryPosition, calculateTreeLevel, formatCurrency } from '../utils/math';
+import { collections, corsOptions, rateLimits } from '../config';
 
+// Initialize logger
 const logger = createLogger('UserHandlers');
 
 // Create Express app
@@ -23,7 +24,7 @@ app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 
-// Rate limiting
+// Rate limiting for user operations
 const userLimiter = rateLimit({
   windowMs: rateLimits.general.windowMs,
   max: rateLimits.general.max,
@@ -38,14 +39,15 @@ const userLimiter = rateLimit({
 app.use('/user', userLimiter);
 
 // User authentication middleware
-const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Authorization header required'
       });
+      return;
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -54,10 +56,11 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
     try {
       decodedToken = await admin.auth().verifyIdToken(idToken);
     } catch (tokenError) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Invalid token'
       });
+      return;
     }
 
     // Add user info to request
@@ -65,6 +68,7 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
       uid: decodedToken.uid,
       email: decodedToken.email,
       isActive: decodedToken.isActive || false,
+      isVerified: decodedToken.isVerified || false,
       rank: decodedToken.rank || 'Inactive'
     };
 
@@ -91,162 +95,194 @@ app.use('/user', requireAuth);
 // Validation schemas
 const profileUpdateSchema = Joi.object({
   fullName: Joi.string().min(2).max(100),
-  phone: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/),
-  dateOfBirth: Joi.date().max('now'),
-  address: Joi.object({
-    street: Joi.string().max(200),
-    city: Joi.string().max(100),
-    state: Joi.string().max(100),
-    country: Joi.string().max(100),
-    zipCode: Joi.string().max(20)
-  }),
+  contactNumber: Joi.string().pattern(/^\+?[\d\s\-\(\)]{10,15}$/),
+  walletAddress: Joi.string().min(26).max(62),
   bankDetails: Joi.object({
-    accountName: Joi.string().max(100),
-    accountNumber: Joi.string().max(50),
-    bankName: Joi.string().max(100),
-    routingNumber: Joi.string().max(50)
-  }),
-  cryptoWallets: Joi.object({
-    usdtBep20: Joi.string().max(100),
-    bitcoin: Joi.string().max(100),
-    ethereum: Joi.string().max(100)
+    accountNumber: Joi.string().min(8).max(20),
+    ifscCode: Joi.string().min(11).max(11),
+    accountHolderName: Joi.string().min(2).max(100),
+    bankName: Joi.string().min(2).max(100)
   })
 });
+
+// Helper function to calculate team statistics
+const calculateTeamStats = async (userId: string, level: number = 5): Promise<any> => {
+  const teamStats = {
+    totalMembers: 0,
+    activeMembers: 0,
+    levels: [] as any[]
+  };
+
+  const processLevel = async (userIds: string[], currentLevel: number): Promise<string[]> => {
+    if (currentLevel > level || userIds.length === 0) {
+      return [];
+    }
+
+    const levelUsers = await Promise.all(
+      userIds.map(async (uid) => {
+        const userDoc = await admin.firestore()
+          .collection(collections.USERS)
+          .doc(uid)
+          .get();
+        
+        return userDoc.exists ? { id: uid, ...userDoc.data() } : null;
+      })
+    );
+
+    const validUsers = levelUsers.filter(user => user !== null) as Array<{
+      id: string;
+      fullName?: string;
+      email?: string;
+      userId?: string;
+      isActive?: boolean;
+      rank?: string;
+      createdAt?: admin.firestore.Timestamp;
+      [key: string]: any;
+    }>;
+    const activeUsers = validUsers.filter(user => user.isActive);
+
+    teamStats.totalMembers += validUsers.length;
+    teamStats.activeMembers += activeUsers.length;
+
+    teamStats.levels.push({
+      level: currentLevel,
+      totalMembers: validUsers.length,
+      activeMembers: activeUsers.length,
+      members: validUsers.map(user => ({
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        userId: user.userId,
+        isActive: user.isActive,
+        rank: user.rank,
+        joinedAt: user.createdAt?.toDate()
+      }))
+    });
+
+    // Get next level referrals
+    const nextLevelIds: string[] = [];
+    for (const user of validUsers) {
+      const referralsSnapshot = await admin.firestore()
+        .collection(collections.USERS)
+        .where('sponsorId', '==', user.id)
+        .get();
+      
+      referralsSnapshot.docs.forEach(doc => {
+        nextLevelIds.push(doc.id);
+      });
+    }
+
+    return await processLevel(nextLevelIds, currentLevel + 1);
+  };
+
+  // Start with direct referrals
+  const directReferralsSnapshot = await admin.firestore()
+    .collection(collections.USERS)
+    .where('sponsorId', '==', userId)
+    .get();
+
+  const directReferralIds = directReferralsSnapshot.docs.map(doc => doc.id);
+  await processLevel(directReferralIds, 1);
+
+  return teamStats;
+};
 
 /**
  * GET /user/dashboard
  * Get user dashboard data
  */
-app.get('/user/dashboard', async (req, res) => {
+app.get('/user/dashboard', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const uid = (req as any).user.uid;
+    const userId = (req as any).user.uid;
 
-    // Get user data and related information
-    const [userDoc, recentTransactions, recentIncomes, teamStats] = await Promise.all([
-      admin.firestore().collection(collections.USERS).doc(uid).get(),
-      
+    const [
+      userDoc,
+      recentTransactions,
+      recentIncomes,
+      teamStats
+    ] = await Promise.all([
+      admin.firestore().collection(collections.USERS).doc(userId).get(),
       admin.firestore().collection(collections.TRANSACTIONS)
-        .where('userId', '==', uid)
+        .where('userId', '==', userId)
         .orderBy('createdAt', 'desc')
         .limit(5)
         .get(),
-      
       admin.firestore().collection(collections.INCOMES)
-        .where('userId', '==', uid)
+        .where('userId', '==', userId)
         .orderBy('createdAt', 'desc')
         .limit(5)
         .get(),
-      
-      // Get team statistics
-      admin.firestore().collection(collections.USERS)
-        .where('sponsorId', '==', uid)
-        .get()
+      calculateTeamStats(userId, 3) // Only 3 levels for dashboard
     ]);
 
     if (!userDoc.exists) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
-        error: 'User profile not found'
+        error: 'User not found'
       });
+      return;
     }
 
     const userData = userDoc.data();
-
-    // Calculate team statistics
-    const directReferrals = teamStats.size;
-    const activeReferrals = teamStats.docs.filter(doc => doc.data().isActive).length;
-
-    // Get total team size from user data
-    const totalTeamSize = userData?.teamSize || 0;
-
-    // Calculate income statistics
-    const recentIncomeData = recentIncomes.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate()
-    }));
-
-    const totalIncomeToday = recentIncomeData
-      .filter(income => {
-        const today = new Date();
-        const incomeDate = income.createdAt;
-        return incomeDate && 
-               incomeDate.toDateString() === today.toDateString();
-      })
-      .reduce((sum, income) => sum + (income.amount || 0), 0);
-
-    // Get recent transactions
     const recentTxData = recentTransactions.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate()
     }));
 
-    // Get rank information
-    const rankDoc = await admin.firestore()
-      .collection(collections.RANKS)
-      .doc(userData?.rank || 'Inactive')
+    const recentIncomeData = recentIncomes.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate()
+    }));
+
+    // Calculate total incomes for current month
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
+
+    const monthlyIncomesSnapshot = await admin.firestore()
+      .collection(collections.INCOMES)
+      .where('userId', '==', userId)
+      .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(currentMonth))
       .get();
 
-    const rankData = rankDoc.exists ? rankDoc.data() : null;
-
-    // Calculate next rank progress
-    let nextRankProgress = 0;
-    if (rankData && rankData.nextRank) {
-      const nextRankDoc = await admin.firestore()
-        .collection(collections.RANKS)
-        .doc(rankData.nextRank)
-        .get();
-      
-      if (nextRankDoc.exists) {
-        const nextRankData = nextRankDoc.data();
-        const currentBV = userData?.businessVolume || 0;
-        const requiredBV = nextRankData?.requirements?.businessVolume || 0;
-        nextRankProgress = requiredBV > 0 ? Math.min((currentBV / requiredBV) * 100, 100) : 0;
-      }
-    }
+    const thisMonthIncome = monthlyIncomesSnapshot.docs.reduce((sum, doc) => {
+      return sum + (doc.data().amount || 0);
+    }, 0);
 
     res.json({
       success: true,
       data: {
         user: {
-          uid,
+          id: userId,
           fullName: userData?.fullName,
           email: userData?.email,
           userId: userData?.userId,
           rank: userData?.rank,
           isActive: userData?.isActive,
           isVerified: userData?.isVerified,
+          availableBalance: userData?.availableBalance || 0,
+          totalEarnings: userData?.totalEarnings || 0,
           joinedAt: userData?.createdAt?.toDate()
         },
-        balances: {
-          available: userData?.availableBalance || 0,
-          total: userData?.totalEarnings || 0,
-          pending: userData?.pendingBalance || 0
+        incomes: {
+          thisMonth: thisMonthIncome,
+          recent: recentIncomeData
         },
-        statistics: {
-          totalIncome: userData?.totalEarnings || 0,
-          todayIncome: totalIncomeToday,
-          directReferrals,
-          activeReferrals,
-          totalTeamSize,
-          businessVolume: userData?.businessVolume || 0
-        },
-        rank: {
-          current: userData?.rank || 'Inactive',
-          benefits: rankData?.benefits || {},
-          nextRank: rankData?.nextRank || null,
-          nextRankProgress
-        },
-        recentTransactions: recentTxData,
-        recentIncomes: recentIncomeData
+        transactions: recentTxData,
+        team: {
+          totalMembers: teamStats.totalMembers,
+          activeMembers: teamStats.activeMembers,
+          directReferrals: teamStats.levels[0]?.totalMembers || 0
+        }
       }
     });
 
   } catch (error) {
     await logger.error(
       LogCategory.API,
-      'Dashboard fetch failed',
+      'User dashboard fetch failed',
       error as Error,
       (req as any).user?.uid
     );
@@ -262,36 +298,40 @@ app.get('/user/dashboard', async (req, res) => {
  * GET /user/profile
  * Get user profile information
  */
-app.get('/user/profile', async (req, res) => {
+app.get('/user/profile', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const uid = (req as any).user.uid;
+    const userId = (req as any).user.uid;
 
-    const userDoc = await admin.firestore().collection(collections.USERS).doc(uid).get();
+    const userDoc = await admin.firestore()
+      .collection(collections.USERS)
+      .doc(userId)
+      .get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
-        error: 'User profile not found'
+        error: 'User not found'
       });
+      return;
     }
 
     const userData = userDoc.data();
+    let sponsorData = null;
 
-    // Get sponsor information if available
-    let sponsorInfo = null;
+    // Get sponsor information if exists
     if (userData?.sponsorId) {
       const sponsorDoc = await admin.firestore()
         .collection(collections.USERS)
         .doc(userData.sponsorId)
         .get();
-      
+
       if (sponsorDoc.exists) {
-        const sponsorData = sponsorDoc.data();
-        sponsorInfo = {
-          uid: userData.sponsorId,
-          fullName: sponsorData?.fullName,
-          userId: sponsorData?.userId,
-          email: sponsorData?.email
+        const sponsor = sponsorDoc.data();
+        sponsorData = {
+          id: userData.sponsorId,
+          fullName: sponsor?.fullName,
+          userId: sponsor?.userId,
+          email: sponsor?.email
         };
       }
     }
@@ -299,29 +339,18 @@ app.get('/user/profile', async (req, res) => {
     res.json({
       success: true,
       data: {
-        uid,
-        fullName: userData?.fullName,
-        email: userData?.email,
-        userId: userData?.userId,
-        phone: userData?.phone,
-        dateOfBirth: userData?.dateOfBirth?.toDate(),
-        address: userData?.address,
-        bankDetails: userData?.bankDetails,
-        cryptoWallets: userData?.cryptoWallets,
-        rank: userData?.rank,
-        isActive: userData?.isActive,
-        isVerified: userData?.isVerified,
-        sponsor: sponsorInfo,
-        binaryPosition: userData?.binaryPosition,
+        id: userId,
+        ...userData,
         createdAt: userData?.createdAt?.toDate(),
-        updatedAt: userData?.updatedAt?.toDate()
+        updatedAt: userData?.updatedAt?.toDate(),
+        sponsor: sponsorData
       }
     });
 
   } catch (error) {
     await logger.error(
       LogCategory.API,
-      'Profile fetch failed',
+      'User profile fetch failed',
       error as Error,
       (req as any).user?.uid
     );
@@ -335,20 +364,35 @@ app.get('/user/profile', async (req, res) => {
 
 /**
  * PUT /user/profile
- * Update user profile information
+ * Update user profile
  */
-app.put('/user/profile', async (req, res) => {
+app.put('/user/profile', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const uid = (req as any).user.uid;
+    const userId = (req as any).user.uid;
 
     // Validate input
     const { error, value } = profileUpdateSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Validation error',
         details: error.details[0].message
       });
+      return;
+    }
+
+    // Check if user exists
+    const userDoc = await admin.firestore()
+      .collection(collections.USERS)
+      .doc(userId)
+      .get();
+
+    if (!userDoc.exists) {
+      res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+      return;
     }
 
     // Update user profile
@@ -357,12 +401,15 @@ app.put('/user/profile', async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
-    await admin.firestore().collection(collections.USERS).doc(uid).update(updateData);
+    await admin.firestore()
+      .collection(collections.USERS)
+      .doc(userId)
+      .update(updateData);
 
     await logger.info(
       LogCategory.API,
-      'Profile updated',
-      uid,
+      'User profile updated',
+      userId,
       { updates: Object.keys(value) }
     );
 
@@ -374,7 +421,7 @@ app.put('/user/profile', async (req, res) => {
   } catch (error) {
     await logger.error(
       LogCategory.API,
-      'Profile update failed',
+      'User profile update failed',
       error as Error,
       (req as any).user?.uid
     );
@@ -388,108 +435,81 @@ app.put('/user/profile', async (req, res) => {
 
 /**
  * GET /user/referral
- * Get referral system information
+ * Get referral information
  */
-app.get('/user/referral', async (req, res) => {
+app.get('/user/referral', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const uid = (req as any).user.uid;
+    const userId = (req as any).user.uid;
 
-    // Get user data
-    const userDoc = await admin.firestore().collection(collections.USERS).doc(uid).get();
-    if (!userDoc.exists) {
-      return res.status(404).json({
-        success: false,
-        error: 'User profile not found'
-      });
-    }
+    const [directReferrals, referralIncomes] = await Promise.all([
+      admin.firestore().collection(collections.USERS)
+        .where('sponsorId', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .get(),
+      admin.firestore().collection(collections.INCOMES)
+        .where('userId', '==', userId)
+        .where('type', 'in', ['referral', 'level'])
+        .orderBy('createdAt', 'desc')
+        .limit(20)
+        .get()
+    ]);
 
-    const userData = userDoc.data();
+    const referralData = directReferrals.docs.map(doc => ({
+      id: doc.id,
+      fullName: doc.data().fullName,
+      email: doc.data().email,
+      userId: doc.data().userId,
+      isActive: doc.data().isActive,
+      rank: doc.data().rank,
+      joinedAt: doc.data().createdAt?.toDate()
+    }));
 
-    // Get direct referrals
-    const directReferralsSnapshot = await admin.firestore()
-      .collection(collections.USERS)
-      .where('sponsorId', '==', uid)
-      .orderBy('createdAt', 'desc')
-      .get();
-
-    const directReferrals = directReferralsSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        uid: doc.id,
-        fullName: data.fullName,
-        userId: data.userId,
-        email: data.email,
-        rank: data.rank,
-        isActive: data.isActive,
-        joinedAt: data.createdAt?.toDate(),
-        businessVolume: data.businessVolume || 0
-      };
-    });
-
-    // Get binary tree structure (left and right legs)
-    const binaryTree = {
-      left: {
-        count: userData?.binaryLeft?.count || 0,
-        businessVolume: userData?.binaryLeft?.businessVolume || 0
-      },
-      right: {
-        count: userData?.binaryRight?.count || 0,
-        businessVolume: userData?.binaryRight?.businessVolume || 0
-      }
-    };
-
-    // Get referral income statistics
-    const referralIncomesSnapshot = await admin.firestore()
-      .collection(collections.INCOMES)
-      .where('userId', '==', uid)
-      .where('type', 'in', ['referral', 'level'])
-      .orderBy('createdAt', 'desc')
-      .limit(20)
-      .get();
-
-    const referralIncomes = referralIncomesSnapshot.docs.map(doc => ({
+    const incomeData = referralIncomes.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate()
-    }));
+    })) as Array<{
+      id: string;
+      amount: number;
+      type: string;
+      createdAt: Date;
+      [key: string]: any;
+    }>;
 
-    // Calculate referral statistics
-    const totalReferralIncome = referralIncomes.reduce((sum, income) => sum + (income.amount || 0), 0);
-    const thisMonthIncome = referralIncomes
-      .filter(income => {
-        const incomeDate = income.createdAt;
-        const now = new Date();
-        return incomeDate && 
-               incomeDate.getMonth() === now.getMonth() && 
-               incomeDate.getFullYear() === now.getFullYear();
-      })
+    // Calculate total referral income
+    const totalReferralIncome = incomeData.reduce((sum, income) => {
+      return sum + (income.amount || 0);
+    }, 0);
+
+    // Calculate this month's referral income
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    currentMonth.setHours(0, 0, 0, 0);
+
+    const thisMonthIncome = incomeData
+      .filter(income => income.createdAt >= currentMonth)
       .reduce((sum, income) => sum + (income.amount || 0), 0);
-
-    // Generate referral link
-    const referralLink = `${process.env.FRONTEND_URL || 'https://wayglobe.com'}/signup?ref=${userData?.userId}`;
 
     res.json({
       success: true,
       data: {
-        referralCode: userData?.userId,
-        referralLink,
-        statistics: {
-          directReferrals: directReferrals.length,
-          activeReferrals: directReferrals.filter(ref => ref.isActive).length,
-          totalTeamSize: userData?.teamSize || 0,
-          totalReferralIncome,
-          thisMonthIncome
+        directReferrals: {
+          count: referralData.length,
+          active: referralData.filter(ref => ref.isActive).length,
+          list: referralData
         },
-        binaryTree,
-        directReferrals,
-        recentIncomes: referralIncomes
+        incomes: {
+          total: totalReferralIncome,
+          thisMonth: thisMonthIncome,
+          recent: incomeData
+        }
       }
     });
 
   } catch (error) {
     await logger.error(
       LogCategory.API,
-      'Referral data fetch failed',
+      'User referral fetch failed',
       error as Error,
       (req as any).user?.uid
     );
@@ -503,18 +523,18 @@ app.get('/user/referral', async (req, res) => {
 
 /**
  * GET /user/transactions
- * Get user transaction history
+ * Get user transactions
  */
-app.get('/user/transactions', async (req, res) => {
+app.get('/user/transactions', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const uid = (req as any).user.uid;
+    const userId = (req as any).user.uid;
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-    const type = req.query.type as string; // 'activation', 'topup', 'withdrawal', 'all'
+    const type = req.query.type as string; // 'deposit', 'withdrawal', 'activation', 'all'
 
-    let query = admin.firestore()
+    let query: admin.firestore.Query = admin.firestore()
       .collection(collections.TRANSACTIONS)
-      .where('userId', '==', uid);
+      .where('userId', '==', userId);
 
     // Apply type filter
     if (type && type !== 'all') {
@@ -530,16 +550,11 @@ app.get('/user/transactions', async (req, res) => {
     const transactions = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate()
+      createdAt: doc.data().createdAt?.toDate()
     }));
 
     // Get total count for pagination
-    const totalSnapshot = await admin.firestore()
-      .collection(collections.TRANSACTIONS)
-      .where('userId', '==', uid)
-      .count()
-      .get();
+    const totalSnapshot = await query.count().get();
 
     res.json({
       success: true,
@@ -557,168 +572,14 @@ app.get('/user/transactions', async (req, res) => {
   } catch (error) {
     await logger.error(
       LogCategory.API,
-      'Transaction history fetch failed',
+      'User transactions fetch failed',
       error as Error,
       (req as any).user?.uid
     );
 
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch transaction history'
-    });
-  }
-});
-
-/**
- * GET /user/incomes
- * Get user income history
- */
-app.get('/user/incomes', async (req, res) => {
-  try {
-    const uid = (req as any).user.uid;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-    const type = req.query.type as string; // 'referral', 'level', 'global', 'retopup', 'all'
-
-    let query = admin.firestore()
-      .collection(collections.INCOMES)
-      .where('userId', '==', uid);
-
-    // Apply type filter
-    if (type && type !== 'all') {
-      query = query.where('type', '==', type);
-    }
-
-    const snapshot = await query
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .offset((page - 1) * limit)
-      .get();
-
-    const incomes = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate()
-    }));
-
-    // Calculate income statistics
-    const totalIncome = incomes.reduce((sum, income) => sum + (income.amount || 0), 0);
-    
-    const incomeByType = incomes.reduce((acc, income) => {
-      const type = income.type || 'other';
-      acc[type] = (acc[type] || 0) + (income.amount || 0);
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Get total count for pagination
-    const totalSnapshot = await admin.firestore()
-      .collection(collections.INCOMES)
-      .where('userId', '==', uid)
-      .count()
-      .get();
-
-    res.json({
-      success: true,
-      data: {
-        incomes,
-        statistics: {
-          totalIncome,
-          incomeByType
-        },
-        pagination: {
-          page,
-          limit,
-          total: totalSnapshot.data().count,
-          hasMore: totalSnapshot.data().count > page * limit
-        }
-      }
-    });
-
-  } catch (error) {
-    await logger.error(
-      LogCategory.API,
-      'Income history fetch failed',
-      error as Error,
-      (req as any).user?.uid
-    );
-
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch income history'
-    });
-  }
-});
-
-/**
- * GET /user/withdrawals
- * Get user withdrawal history
- */
-app.get('/user/withdrawals', async (req, res) => {
-  try {
-    const uid = (req as any).user.uid;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
-
-    const snapshot = await admin.firestore()
-      .collection(collections.WITHDRAWALS)
-      .where('userId', '==', uid)
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .offset((page - 1) * limit)
-      .get();
-
-    const withdrawals = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-      updatedAt: doc.data().updatedAt?.toDate()
-    }));
-
-    // Calculate withdrawal statistics
-    const totalWithdrawn = withdrawals
-      .filter(w => w.status === 'completed')
-      .reduce((sum, w) => sum + (w.amount || 0), 0);
-
-    const pendingAmount = withdrawals
-      .filter(w => w.status === 'pending')
-      .reduce((sum, w) => sum + (w.amount || 0), 0);
-
-    // Get total count for pagination
-    const totalSnapshot = await admin.firestore()
-      .collection(collections.WITHDRAWALS)
-      .where('userId', '==', uid)
-      .count()
-      .get();
-
-    res.json({
-      success: true,
-      data: {
-        withdrawals,
-        statistics: {
-          totalWithdrawn,
-          pendingAmount,
-          totalRequests: totalSnapshot.data().count
-        },
-        pagination: {
-          page,
-          limit,
-          total: totalSnapshot.data().count,
-          hasMore: totalSnapshot.data().count > page * limit
-        }
-      }
-    });
-
-  } catch (error) {
-    await logger.error(
-      LogCategory.API,
-      'Withdrawal history fetch failed',
-      error as Error,
-      (req as any).user?.uid
-    );
-
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch withdrawal history'
+      error: 'Failed to fetch transactions'
     });
   }
 });
@@ -727,112 +588,35 @@ app.get('/user/withdrawals', async (req, res) => {
  * GET /user/team
  * Get team structure and statistics
  */
-app.get('/user/team', async (req, res) => {
+app.get('/user/team', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const uid = (req as any).user.uid;
-    const level = parseInt(req.query.level as string) || 1;
-    const maxLevel = Math.min(level, 5); // Limit to 5 levels for performance
+    const userId = (req as any).user.uid;
+    const level = Math.min(parseInt(req.query.level as string) || 5, 10); // Max 10 levels
 
-    // Get user data
-    const userDoc = await admin.firestore().collection(collections.USERS).doc(uid).get();
-    if (!userDoc.exists) {
-      return res.status(404).json({
-        success: false,
-        error: 'User profile not found'
-      });
-    }
-
-    // Get team members at specified level
-    const getTeamAtLevel = async (parentId: string, currentLevel: number): Promise<any[]> => {
-      if (currentLevel > maxLevel) return [];
-
-      const snapshot = await admin.firestore()
-        .collection(collections.USERS)
-        .where('sponsorId', '==', parentId)
-        .orderBy('createdAt', 'desc')
-        .get();
-
-      const members = await Promise.all(
-        snapshot.docs.map(async (doc) => {
-          const data = doc.data();
-          const children = currentLevel < maxLevel ? await getTeamAtLevel(doc.id, currentLevel + 1) : [];
-          
-          return {
-            uid: doc.id,
-            fullName: data.fullName,
-            userId: data.userId,
-            email: data.email,
-            rank: data.rank,
-            isActive: data.isActive,
-            businessVolume: data.businessVolume || 0,
-            teamSize: data.teamSize || 0,
-            joinedAt: data.createdAt?.toDate(),
-            level: currentLevel,
-            children
-          };
-        })
-      );
-
-      return members;
-    };
-
-    const teamStructure = await getTeamAtLevel(uid, 1);
-
-    // Calculate team statistics
-    const calculateTeamStats = (members: any[]): any => {
-      let totalMembers = 0;
-      let activeMembers = 0;
-      let totalBV = 0;
-
-      const processMembers = (memberList: any[]) => {
-        memberList.forEach(member => {
-          totalMembers++;
-          if (member.isActive) activeMembers++;
-          totalBV += member.businessVolume || 0;
-          
-          if (member.children && member.children.length > 0) {
-            processMembers(member.children);
-          }
-        });
-      };
-
-      processMembers(members);
-
-      return {
-        totalMembers,
-        activeMembers,
-        totalBusinessVolume: totalBV
-      };
-    };
-
-    const teamStats = calculateTeamStats(teamStructure);
+    const teamStats = await calculateTeamStats(userId, level);
 
     res.json({
       success: true,
-      data: {
-        teamStructure,
-        statistics: teamStats,
-        level: maxLevel
-      }
+      data: teamStats
     });
 
   } catch (error) {
     await logger.error(
       LogCategory.API,
-      'Team structure fetch failed',
+      'User team fetch failed',
       error as Error,
       (req as any).user?.uid
     );
 
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch team structure'
+      error: 'Failed to fetch team data'
     });
   }
 });
 
 // Health check endpoint
-app.get('/user/health', (req, res) => {
+app.get('/user/health', (req: express.Request, res: express.Response): void => {
   res.json({
     success: true,
     message: 'User service is healthy',
@@ -841,7 +625,7 @@ app.get('/user/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction): void => {
   logger.error(
     LogCategory.API,
     'Unhandled error in user handlers',

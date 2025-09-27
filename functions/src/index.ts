@@ -11,6 +11,8 @@ export { userHandlers } from './handlers/userHandlers';
 
 // Callable Functions
 export { signup } from './callable/signup';
+export { login } from './callable/login';
+export { getUserData } from './callable/getUserData';
 export { createActivation } from './callable/createActivation';
 export { requestWithdrawal } from './callable/requestWithdrawal';
 export { claimPayout } from './callable/claimPayout';

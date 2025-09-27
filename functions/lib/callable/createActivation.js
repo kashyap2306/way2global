@@ -127,7 +127,10 @@ async function getUserData(uid) {
         if (!userDoc.exists) {
             throw new functions.https.HttpsError('not-found', 'User not found');
         }
-        return Object.assign({ uid }, userDoc.data());
+        return {
+            uid,
+            ...userDoc.data()
+        };
     }
     catch (error) {
         if (error instanceof functions.https.HttpsError) {
@@ -238,7 +241,7 @@ async function processFundConversion(userData, paymentDetails, requiredAmount) {
             throw new Error('User not found');
         }
         const currentData = userDoc.data();
-        const currentBalance = (currentData === null || currentData === void 0 ? void 0 : currentData.availableBalance) || 0;
+        const currentBalance = currentData?.availableBalance || 0;
         if (currentBalance < requiredAmount) {
             throw new Error('Insufficient balance');
         }

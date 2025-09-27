@@ -59,16 +59,17 @@ const changePasswordSchema = Joi.object({
  * POST /auth/login
  * Authenticate user with email and password
  */
-app.post('/auth/login', async (req, res) => {
+app.post('/auth/login', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     // Validate input
     const { error, value } = loginSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Validation error',
         details: error.details[0].message
       });
+      return;
     }
 
     const { email } = value;
@@ -86,10 +87,11 @@ app.post('/auth/login', async (req, res) => {
       userRecord = await admin.auth().getUserByEmail(email);
     } catch (authError: any) {
       if (authError.code === 'auth/user-not-found') {
-        return res.status(401).json({
+        res.status(401).json({
           success: false,
           error: 'Invalid credentials'
         });
+        return;
       }
       throw authError;
     }
@@ -101,20 +103,22 @@ app.post('/auth/login', async (req, res) => {
       .get();
 
     if (!userDoc.exists) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'User profile not found'
       });
+      return;
     }
 
     const userData = userDoc.data();
 
     // Check if account is disabled
     if (userRecord.disabled) {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: 'Account has been disabled'
       });
+      return;
     }
 
     // In a real implementation, you would verify the password here
@@ -123,10 +127,9 @@ app.post('/auth/login', async (req, res) => {
 
     // Create custom token with additional claims
     const customClaims = {
-      role: userData?.isActive ? 'user' : 'inactive',
-      isActive: userData?.isActive || false,
-      rank: userData?.rank || 'Inactive',
-      isVerified: userData?.isVerified || false
+      role: userData?.status === 'active' ? 'user' : 'inactive',
+      status: userData?.status || 'active',
+      rank: userData?.rank || 'Azurite'
     };
 
     // Update custom claims
@@ -160,13 +163,13 @@ app.post('/auth/login', async (req, res) => {
         customToken,
         user: {
           uid: userRecord.uid,
-          fullName: userData?.fullName,
+          displayName: userData?.displayName,
           email: userData?.email,
           rank: userData?.rank,
-          isActive: userData?.isActive,
-          isVerified: userData?.isVerified,
-          availableBalance: userData?.availableBalance || 0,
-          totalEarnings: userData?.totalEarnings || 0
+          status: userData?.status,
+          balance: userData?.balance || 0,
+          totalEarnings: userData?.totalEarnings || 0,
+          referrals: userData?.referrals || []
         }
       }
     });
@@ -180,11 +183,12 @@ app.post('/auth/login', async (req, res) => {
       { email: req.body.email, ip: req.ip }
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: errorCodes.LOGIN_FAILED,
       message: 'Login failed. Please try again.'
     });
+    return;
   }
 });
 
@@ -192,16 +196,17 @@ app.post('/auth/login', async (req, res) => {
  * POST /auth/refresh
  * Refresh user token and get updated user data
  */
-app.post('/auth/refresh', async (req, res) => {
+app.post('/auth/refresh', async (req, res): Promise<void> => {
   try {
     // Validate input
     const { error, value } = refreshTokenSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Validation error',
         details: error.details[0].message
       });
+      return;
     }
 
     const { refreshToken } = value;
@@ -212,10 +217,11 @@ app.post('/auth/refresh', async (req, res) => {
     try {
       decodedToken = await admin.auth().verifyIdToken(refreshToken);
     } catch (tokenError) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Invalid refresh token'
       });
+      return;
     }
 
     const uid = decodedToken.uid;
@@ -224,10 +230,11 @@ app.post('/auth/refresh', async (req, res) => {
     const userDoc = await admin.firestore().collection(collections.USERS).doc(uid).get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'User profile not found'
       });
+      return;
     }
 
     const userData = userDoc.data();
@@ -279,10 +286,11 @@ app.post('/auth/refresh', async (req, res) => {
       { ip: req.ip }
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: 'Token refresh failed'
     });
+    return;
   }
 });
 
@@ -290,14 +298,15 @@ app.post('/auth/refresh', async (req, res) => {
  * POST /auth/logout
  * Logout user and revoke tokens
  */
-app.post('/auth/logout', async (req, res) => {
+app.post('/auth/logout', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Authorization header required'
       });
+      return;
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -306,10 +315,11 @@ app.post('/auth/logout', async (req, res) => {
     try {
       decodedToken = await admin.auth().verifyIdToken(idToken);
     } catch (tokenError) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Invalid token'
       });
+      return;
     }
 
     const uid = decodedToken.uid;
@@ -337,10 +347,11 @@ app.post('/auth/logout', async (req, res) => {
       { ip: req.ip }
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: 'Logout failed'
     });
+    return;
   }
 });
 
@@ -348,16 +359,17 @@ app.post('/auth/logout', async (req, res) => {
  * POST /auth/reset-password
  * Send password reset email
  */
-app.post('/auth/reset-password', async (req, res) => {
+app.post('/auth/reset-password', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     // Validate input
     const { error, value } = resetPasswordSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Validation error',
         details: error.details[0].message
       });
+      return;
     }
 
     const { email } = value;
@@ -368,10 +380,11 @@ app.post('/auth/reset-password', async (req, res) => {
     } catch (authError: any) {
       if (authError.code === 'auth/user-not-found') {
         // Don't reveal if email exists or not for security
-        return res.json({
+        res.json({
           success: true,
           message: 'If the email exists, a password reset link has been sent.'
         });
+        return;
       }
       throw authError;
     }
@@ -413,15 +426,16 @@ app.post('/auth/reset-password', async (req, res) => {
  * POST /auth/change-password
  * Change user password (requires authentication)
  */
-app.post('/auth/change-password', async (req, res) => {
+app.post('/auth/change-password', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     // Verify authentication
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Authorization header required'
       });
+      return;
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -430,20 +444,22 @@ app.post('/auth/change-password', async (req, res) => {
     try {
       decodedToken = await admin.auth().verifyIdToken(idToken);
     } catch (tokenError) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Invalid token'
       });
+      return;
     }
 
     // Validate input
     const { error, value } = changePasswordSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Validation error',
         details: error.details[0].message
       });
+      return;
     }
 
     const { newPassword } = value;
@@ -481,7 +497,7 @@ app.post('/auth/change-password', async (req, res) => {
       { ip: req.ip }
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: 'Password change failed'
     });
@@ -492,14 +508,15 @@ app.post('/auth/change-password', async (req, res) => {
  * GET /auth/verify-token
  * Verify token and return user info
  */
-app.get('/auth/verify-token', async (req, res) => {
+app.get('/auth/verify-token', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Authorization header required'
       });
+      return;
     }
 
     const idToken = authHeader.split('Bearer ')[1];
@@ -508,10 +525,11 @@ app.get('/auth/verify-token', async (req, res) => {
     try {
       decodedToken = await admin.auth().verifyIdToken(idToken);
     } catch (tokenError) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: 'Invalid token'
       });
+      return;
     }
 
     const uid = decodedToken.uid;
@@ -523,10 +541,11 @@ app.get('/auth/verify-token', async (req, res) => {
       .get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'User profile not found'
       });
+      return;
     }
 
     const userData = userDoc.data();
@@ -559,7 +578,7 @@ app.get('/auth/verify-token', async (req, res) => {
       { ip: req.ip }
     );
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: 'Token verification failed'
     });

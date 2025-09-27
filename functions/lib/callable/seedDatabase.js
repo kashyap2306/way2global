@@ -57,7 +57,6 @@ const seedSchema = Joi.object({
  * - reseed: Clear and then seed (force required)
  */
 exports.seedDatabase = functions.https.onCall(async (data, context) => {
-    var _a;
     try {
         // Check authentication
         if (!context.auth) {
@@ -127,7 +126,7 @@ exports.seedDatabase = functions.https.onCall(async (data, context) => {
         }
     }
     catch (error) {
-        await logger.error(logger_1.LogCategory.SYSTEM, 'Seed database operation failed', error, (_a = context.auth) === null || _a === void 0 ? void 0 : _a.uid, { action: data === null || data === void 0 ? void 0 : data.action });
+        await logger.error(logger_1.LogCategory.SYSTEM, 'Seed database operation failed', error, context.auth?.uid, { action: data?.action });
         // Re-throw HttpsError as-is
         if (error instanceof functions.https.HttpsError) {
             throw error;
