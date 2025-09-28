@@ -69,7 +69,6 @@ exports.getUserData = functions.https.onCall(async (data, context) => {
                 userCode: userData?.userCode || '',
                 rank: userData?.rank || 'Azurite',
                 status: userData?.status || 'active',
-                isActive: userData?.isActive || false,
                 balance: userData?.balance || 0,
                 totalEarnings: userData?.totalEarnings || 0,
                 referrals: userData?.referrals || [],

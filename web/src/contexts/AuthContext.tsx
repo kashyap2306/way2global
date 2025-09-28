@@ -9,9 +9,11 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
+import { createAllUserDocuments, checkUserDocumentsExist } from '../services/userSignupService';
 
 interface MLMUserData {
   uid: string;
+  userCode?: string; // Add userCode field
   displayName: string;
   email: string;
   contact?: string;
@@ -20,10 +22,15 @@ interface MLMUserData {
   rank: string;
   status: string;
   balance: number;
+  availableBalance?: number; // Add availableBalance field
   totalEarnings: number;
+  totalWithdrawn?: number; // Add totalWithdrawn field
   referrals: string[];
   activationAmount: number;
   cyclesCompleted: number;
+  directReferrals?: number; // Add directReferrals field
+  teamSize?: number; // Add teamSize field
+  joinedAt?: any; // Add joinedAt field
   createdAt: any;
   lastLoginAt?: any;
   isActive: boolean;
@@ -32,8 +39,6 @@ interface MLMUserData {
   level?: number;
   pendingBalance?: number;
   totalWithdrawals?: number;
-  directReferrals?: number;
-  teamSize?: number;
   currentCycle?: number;
   sideAmounts?: number[];
 }
@@ -44,7 +49,7 @@ interface AuthContextType {
   user: User | null; // Alias for backward compatibility
   userDoc: MLMUserData | null; // Alias for backward compatibility
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, displayName: string) => Promise<User>;
+  signup: (email: string, password: string, displayName: string, sponsorId?: string) => Promise<User>;
   logout: () => Promise<void>;
   loading: boolean;
   updateUserData: (data: Partial<MLMUserData>) => Promise<void>;
@@ -69,9 +74,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userData, setUserData] = useState<MLMUserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = async (email: string, password: string, displayName: string): Promise<User> => {
+  const signup = async (email: string, password: string, displayName: string, sponsorId?: string): Promise<User> => {
     try {
       console.log('[AuthContext] Starting signup process for:', email);
+      
+      // Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
@@ -80,35 +87,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await updateProfile(auth.currentUser, { displayName });
       }
 
-      // Create user document in Firestore
-      const newUserData: MLMUserData = {
-        uid: user.uid,
-        displayName,
-        email: user.email || email,
-        rank: 'Bronze',
-        status: 'active',
-        balance: 0,
-        totalEarnings: 0,
-        referrals: [],
-        activationAmount: 0,
-        cyclesCompleted: 0,
-        isActive: true,
-        role: 'user',
-        level: 1,
-        pendingBalance: 0,
-        totalWithdrawals: 0,
-        directReferrals: 0,
-        teamSize: 0,
-        currentCycle: 0,
-        sideAmounts: [10, 20, 40, 80, 160, 320, 640, 1280],
-        createdAt: serverTimestamp(),
-        lastLoginAt: serverTimestamp()
-      };
+      // Check if user documents already exist (prevent duplicates)
+      const documentsExist = await checkUserDocumentsExist(user.uid);
+      if (documentsExist) {
+        console.log('[AuthContext] User documents already exist, skipping creation');
+        return user;
+      }
 
-      await setDoc(doc(db, 'users', user.uid), newUserData);
-      console.log('[AuthContext] User document created successfully');
+      // Create all required documents using the comprehensive service
+      await createAllUserDocuments(user, displayName, sponsorId);
       
+      console.log('[AuthContext] User signup completed successfully with all documents created');
       return user;
+      
     } catch (error) {
       console.error('[AuthContext] Signup error:', error);
       throw error;

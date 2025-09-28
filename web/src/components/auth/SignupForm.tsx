@@ -105,26 +105,26 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-2xl sm:text-3xl font-extrabold text-white">
             Join Way2Globe Wave
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-slate-300">
             Create your MLM account
           </p>
         </div>
-        <form className="mt-8 space-y-6 bg-white p-8 rounded-xl shadow-lg" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6 bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 p-6 sm:p-8 rounded-xl shadow-2xl backdrop-blur-sm border border-slate-700/50" onSubmit={handleSubmit}>
           {errors.general && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
+            <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg backdrop-blur-sm">
               {errors.general}
             </div>
           )}
           
           <div className="space-y-4">
             <div>
-              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="displayName" className="block text-sm font-medium text-white">
                 Full Name
               </label>
               <input
@@ -132,16 +132,16 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
                 name="displayName"
                 type="text"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-slate-600 placeholder-slate-400 text-white rounded-lg bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm backdrop-blur-sm"
                 placeholder="Enter your full name"
                 value={formData.displayName}
                 onChange={handleInputChange}
               />
-              {errors.displayName && <p className="mt-1 text-sm text-red-600">{errors.displayName}</p>}
+              {errors.displayName && <p className="mt-1 text-sm text-red-400">{errors.displayName}</p>}
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-white">
                 Gmail Address
               </label>
               <input
@@ -149,16 +149,16 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
                 name="email"
                 type="email"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-slate-600 placeholder-slate-400 text-white rounded-lg bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm backdrop-blur-sm"
                 placeholder="your.email@gmail.com"
                 value={formData.email}
                 onChange={handleInputChange}
               />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+              {errors.email && <p className="mt-1 text-sm text-red-400">{errors.email}</p>}
             </div>
 
             <div>
-              <label htmlFor="contact" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="contact" className="block text-sm font-medium text-white">
                 Contact Number
               </label>
               <input
@@ -166,16 +166,16 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
                 name="contact"
                 type="tel"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-slate-600 placeholder-slate-400 text-white rounded-lg bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm backdrop-blur-sm"
                 placeholder="+91-9876543210"
                 value={formData.contact}
                 onChange={handleInputChange}
               />
-              {errors.contact && <p className="mt-1 text-sm text-red-600">{errors.contact}</p>}
+              {errors.contact && <p className="mt-1 text-sm text-red-400">{errors.contact}</p>}
             </div>
 
             <div>
-              <label htmlFor="walletAddress" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="walletAddress" className="block text-sm font-medium text-white">
                 Wallet Address (USDT BEP20)
               </label>
               <input
@@ -183,23 +183,23 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
                 name="walletAddress"
                 type="text"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-slate-600 placeholder-slate-400 text-white rounded-lg bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm backdrop-blur-sm"
                 placeholder="0xABCDEF123456..."
                 value={formData.walletAddress}
                 onChange={handleInputChange}
               />
-              {errors.walletAddress && <p className="mt-1 text-sm text-red-600">{errors.walletAddress}</p>}
+              {errors.walletAddress && <p className="mt-1 text-sm text-red-400">{errors.walletAddress}</p>}
             </div>
 
             <div>
-              <label htmlFor="sponsorId" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="sponsorId" className="block text-sm font-medium text-white">
                 Sponsor ID (Optional)
               </label>
               <input
                 id="sponsorId"
                 name="sponsorId"
                 type="text"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-slate-600 placeholder-slate-400 text-white rounded-lg bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm backdrop-blur-sm"
                 placeholder="Enter sponsor's user ID"
                 value={formData.sponsorId}
                 onChange={handleInputChange}
@@ -207,7 +207,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-white">
                 Password
               </label>
               <input
@@ -215,16 +215,16 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
                 name="password"
                 type="password"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-slate-600 placeholder-slate-400 text-white rounded-lg bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm backdrop-blur-sm"
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={handleInputChange}
               />
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
+              {errors.password && <p className="mt-1 text-sm text-red-400">{errors.password}</p>}
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-white">
                 Confirm Password
               </label>
               <input
@@ -232,12 +232,12 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
                 name="confirmPassword"
                 type="password"
                 required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-slate-600 placeholder-slate-400 text-white rounded-lg bg-slate-800/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm backdrop-blur-sm"
                 placeholder="Confirm your password"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
               />
-              {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
+              {errors.confirmPassword && <p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>}
             </div>
           </div>
 
@@ -245,7 +245,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               {loading ? 'Creating Account...' : 'Create Account'}
             </button>
@@ -255,7 +255,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSwitchToLogin }) => {
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
+              className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors duration-300"
             >
               Already have an account? Sign in
             </button>

@@ -24,14 +24,20 @@ import { db } from '../config/firebase';
 // Types for MLM collections
 export interface MLMUser {
   uid: string;
+  userCode: string;
   email: string;
+  phone: string;
   contact: string;
   displayName: string;
+  fullName: string;
   walletAddress: string;
+  usdtAddress: string;
+  profileImageUrl?: string;
   sponsorId: string | null;
   sponsorRef: DocumentReference | null;
   referrals: string[];
   rank: string;
+  level: number;
   rankActivatedAt: Timestamp;
   activationAmount: number;
   balance: number;
@@ -216,6 +222,16 @@ export const getMLMUser = async (uid: string): Promise<MLMUser | null> => {
     return userSnap.data() as MLMUser;
   }
   return null;
+};
+
+export const updateMLMUser = async (uid: string, updateData: Partial<MLMUser>): Promise<void> => {
+  const userRef = doc(db, 'users', uid);
+  const updatedData = {
+    ...updateData,
+    updatedAt: serverTimestamp() as Timestamp
+  };
+  
+  await updateDoc(userRef, updatedData);
 };
 
 export const checkEmailExists = async (email: string): Promise<boolean> => {
@@ -1262,4 +1278,208 @@ export const processRankUpgrade = async (
     levelIncomes,
     globalCycleId
   };
+};
+
+// Support Ticket Types
+export interface SupportTicket {
+  id?: string;
+  userId: string;
+  userCode: string;
+  subject: string;
+  description: string;
+  status: 'pending' | 'in-progress' | 'resolved' | 'closed';
+  priority: 'normal' | 'high' | 'urgent';
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  assignedTo: string | null;
+  response: TicketResponse[];
+}
+
+export interface TicketResponse {
+  senderId: string;
+  senderRole: 'user' | 'admin';
+  message: string;
+  createdAt: Timestamp;
+}
+
+export interface CreateTicketData {
+  subject: string;
+  description: string;
+  priority?: 'normal' | 'high' | 'urgent';
+}
+
+// Support Ticket Functions
+export const createSupportTicket = async (
+  userId: string, 
+  userCode: string, 
+  ticketData: CreateTicketData
+): Promise<string> => {
+  try {
+    const ticketRef = await addDoc(collection(db, 'supportTickets'), {
+      userId,
+      userCode,
+      subject: ticketData.subject,
+      description: ticketData.description,
+      status: 'pending',
+      priority: ticketData.priority || 'normal',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      assignedTo: null,
+      response: []
+    });
+
+    return ticketRef.id;
+  } catch (error) {
+    console.error('Error creating support ticket:', error);
+    throw error;
+  }
+};
+
+export const getUserTickets = async (userId: string): Promise<SupportTicket[]> => {
+  try {
+    const q = query(
+      collection(db, 'supportTickets'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as SupportTicket));
+  } catch (error) {
+    console.error('Error fetching user tickets:', error);
+    throw error;
+  }
+};
+
+export const getAllTickets = async (): Promise<SupportTicket[]> => {
+  try {
+    const q = query(
+      collection(db, 'supportTickets'),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as SupportTicket));
+  } catch (error) {
+    console.error('Error fetching all tickets:', error);
+    throw error;
+  }
+};
+
+export const getTicketById = async (ticketId: string): Promise<SupportTicket | null> => {
+  try {
+    const ticketDoc = await getDoc(doc(db, 'supportTickets', ticketId));
+    if (ticketDoc.exists()) {
+      return {
+        id: ticketDoc.id,
+        ...ticketDoc.data()
+      } as SupportTicket;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching ticket:', error);
+    throw error;
+  }
+};
+
+export const addTicketResponse = async (
+  ticketId: string,
+  senderId: string,
+  senderRole: 'user' | 'admin',
+  message: string
+): Promise<void> => {
+  try {
+    const ticketRef = doc(db, 'supportTickets', ticketId);
+    const response: TicketResponse = {
+      senderId,
+      senderRole,
+      message,
+      createdAt: serverTimestamp() as Timestamp
+    };
+
+    await updateDoc(ticketRef, {
+      response: arrayUnion(response),
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error adding ticket response:', error);
+    throw error;
+  }
+};
+
+export const updateTicketStatus = async (
+  ticketId: string,
+  status: 'pending' | 'in-progress' | 'resolved' | 'closed'
+): Promise<void> => {
+  try {
+    const ticketRef = doc(db, 'supportTickets', ticketId);
+    await updateDoc(ticketRef, {
+      status,
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error updating ticket status:', error);
+    throw error;
+  }
+};
+
+export const assignTicket = async (
+  ticketId: string,
+  adminId: string
+): Promise<void> => {
+  try {
+    const ticketRef = doc(db, 'supportTickets', ticketId);
+    await updateDoc(ticketRef, {
+      assignedTo: adminId,
+      status: 'in-progress',
+      updatedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error assigning ticket:', error);
+    throw error;
+  }
+};
+
+export const getTicketsByStatus = async (status: string): Promise<SupportTicket[]> => {
+  try {
+    const q = query(
+      collection(db, 'supportTickets'),
+      where('status', '==', status),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as SupportTicket));
+  } catch (error) {
+    console.error('Error fetching tickets by status:', error);
+    throw error;
+  }
+};
+
+export const getTicketsByPriority = async (priority: string): Promise<SupportTicket[]> => {
+  try {
+    const q = query(
+      collection(db, 'supportTickets'),
+      where('priority', '==', priority),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as SupportTicket));
+  } catch (error) {
+    console.error('Error fetching tickets by priority:', error);
+    throw error;
+  }
 };

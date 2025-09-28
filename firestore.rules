@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+    
+    function isAdmin() {
+      return request.auth.token.admin == true;
+    }
+    
+    function isActive() {
+      return request.auth.token.isActive == true;
+    }
+    
+    function isValidBEP20Address(address) {
+      return address.matches('^0x[a-fA-F0-9]{40}$');
+    }
+    
+    // Users Collection
+    match /users/{userId} {
+      // Read: User can read own data, admins can read all
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      
+      // Create: Only during registration
+      allow create: if isAuthenticated() && isOwner(userId);
+      
+      // Update: User can update own profile, admins can update any
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      
+      // Delete: Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Withdrawals Collection
+    match /withdrawals/{withdrawalId} {
+      // Read: User can read own withdrawals, admins can read all
+      allow read: if isAuthenticated() 
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Create: Users can create withdrawal requests with validation
+      allow create: if isAuthenticated() 
+        && isActive()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.amountRequested >= 10
+        && request.resource.data.status == 'pending'
+        && isValidBEP20Address(request.resource.data.address)
+        && request.resource.data.feePercent == 15
+        && request.resource.data.createdAt != null;
+      
+      // Update: Only admins can update withdrawals (approve/reject)
+      allow update: if isAdmin()
+        && (
+          // Approving withdrawal
+          (request.resource.data.status == 'approved' 
+           && request.resource.data.approvedAt != null
+           && request.resource.data.processedBy == request.auth.uid)
+          ||
+          // Rejecting withdrawal
+          (request.resource.data.status == 'rejected'
+           && request.resource.data.notes != null
+           && request.resource.data.processedBy == request.auth.uid)
+        );
+      
+      // Delete: Only admins can delete withdrawals
+      allow delete: if isAdmin();
+    }
+    
+    // Transactions Collection
+    match /transactions/{transactionId} {
+      // Read: User can read own transactions, admins can read all
+      allow read: if isAuthenticated() 
+        && (resource.data.uid == request.auth.uid || isAdmin());
+      
+      // Create: Only system (Cloud Functions) can create transactions
+      allow create: if false;
+      
+      // Update: Only system can update transactions
+      allow update: if false;
+      
+      // Delete: Only admins can delete transactions
+      allow delete: if isAdmin();
+    }
+    
+    // Settings Collection (read-only for users)
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

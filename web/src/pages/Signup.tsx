@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 interface SignupFormData {
   displayName: string;
   email: string;
-  contact: string;
+  phone: string;
   password: string;
   confirmPassword: string;
   walletAddress: string;
@@ -17,7 +17,7 @@ const Signup: React.FC = () => {
   const [formData, setFormData] = useState<SignupFormData>({
     displayName: '',
     email: '',
-    contact: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     walletAddress: '',
@@ -45,11 +45,11 @@ const Signup: React.FC = () => {
       newErrors.email = 'Please enter a valid Gmail address';
     }
 
-    // Contact validation
-    if (!formData.contact) {
-      newErrors.contact = 'Contact number is required';
-    } else if (!/^\+?[\d\s\-\(\)]{10,}$/.test(formData.contact)) {
-      newErrors.contact = 'Please enter a valid contact number';
+    // Phone validation
+    if (!formData.phone) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!/^\+?[\d\s\-\(\)]{10,}$/.test(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number';
     }
 
     // Password validation
@@ -93,7 +93,7 @@ const Signup: React.FC = () => {
         email: formData.email,
         password: formData.password,
         displayName: formData.displayName,
-        contact: formData.contact,
+        phone: formData.phone,
         walletAddress: formData.walletAddress,
         sponsorId: formData.sponsorId || undefined
       });
@@ -242,22 +242,22 @@ const Signup: React.FC = () => {
               {errors.email && <p className="text-sm text-red-600 font-medium">{errors.email}</p>}
             </div>
 
-            {/* Contact */}
+            {/* Phone */}
             <div className="space-y-2">
-              <label htmlFor="contact" className="block text-sm font-semibold text-gray-700">
-                Contact Number
+              <label htmlFor="phone" className="block text-sm font-semibold text-gray-700">
+                Phone Number
               </label>
               <div className="relative">
                 <input
-                  id="contact"
-                  name="contact"
+                  id="phone"
+                  name="phone"
                   type="tel"
                   required
                   className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/50 backdrop-blur-sm ${
-                    errors.contact ? 'border-red-300 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-purple-300'
+                    errors.phone ? 'border-red-300 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-purple-300'
                   }`}
                   placeholder="+1234567890"
-                  value={formData.contact}
+                  value={formData.phone}
                   onChange={handleInputChange}
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -266,7 +266,7 @@ const Signup: React.FC = () => {
                   </svg>
                 </div>
               </div>
-              {errors.contact && <p className="text-sm text-red-600 font-medium">{errors.contact}</p>}
+              {errors.phone && <p className="text-sm text-red-600 font-medium">{errors.phone}</p>}
             </div>
 
             {/* Password */}
