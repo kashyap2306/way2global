@@ -9,27 +9,8 @@ import {
   InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserREIDs, activateREID } from '../../services/firestoreService';
+import { getUserREIDs, activateREID, type Reid } from '../../services/firestoreService';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-
-interface Reid {
-  id: string;
-  originalUID: string;
-  reidNumber: number;
-  rank: string;
-  sponsorREID?: string;
-  isActive: boolean;
-  activationAmount: number;
-  totalEarnings: number;
-  directReferrals: string[];
-  createdAt: any;
-  activatedAt?: any;
-  cycleCompletions: number;
-  metadata?: {
-    parentCycleId?: string;
-    [key: string]: any;
-  };
-}
 
 interface REIDManagementProps {
   onError: (error: string) => void;

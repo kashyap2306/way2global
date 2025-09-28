@@ -1,78 +1,84 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   collection, 
   query, 
-  where, 
   onSnapshot, 
   doc, 
-  getDoc,
+  getDoc, 
   orderBy, 
-  Timestamp 
+  Timestamp,
+  limit
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { ChevronDownIcon, ChevronUpIcon, ClipboardIcon, CheckIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { 
+  ChevronDownIcon, 
+  ChevronUpIcon, 
+  FunnelIcon,
+  MagnifyingGlassIcon,
+  ClipboardIcon,
+  CheckIcon,
+  InformationCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
+} from '@heroicons/react/24/outline';
 
-interface LevelIncomeTransaction {
+interface IncomeTransaction {
   id: string;
+  type: 'Level Income' | 'Re-Level Income';
+  fromUser: string;
   amount: number;
-  fromUserId: string;
   level: number;
+  status: 'pending' | 'approved';
   createdAt: Timestamp;
-  status: 'completed' | 'pending' | 'failed';
-  type: 'level_income';
 }
 
 interface UserData {
   displayName?: string;
   fullName?: string;
   email?: string;
+  userCode?: string;
 }
-
-// Rank-based payout configuration (10 levels for each rank)
-const rankPayoutCharts = {
-  'Azurite': [5, 4, 3, 2, 1, 1, 0.5, 0.5, 0.25, 0.25],
-  'Benitoite': [10, 8, 6, 4, 2, 2, 1, 1, 0.5, 0.5],
-  'Citrine': [25, 20, 15, 10, 5, 5, 2.5, 2.5, 1.25, 1.25],
-  'Danburite': [50, 40, 30, 20, 10, 10, 5, 5, 2.5, 2.5],
-  'Emerald': [125, 100, 75, 50, 25, 25, 12.5, 12.5, 6.25, 6.25],
-  'Fluorite': [250, 200, 150, 100, 50, 50, 25, 25, 12.5, 12.5],
-  'Garnet': [500, 400, 300, 200, 100, 100, 50, 50, 25, 25],
-  'Hematite': [1000, 800, 600, 400, 200, 200, 100, 100, 50, 50],
-  'Iolite': [2500, 2000, 1500, 1000, 500, 500, 250, 250, 125, 125],
-  'Jeremejevite': [5000, 4000, 3000, 2000, 1000, 1000, 500, 500, 250, 250]
-};
 
 const LevelIncomePage: React.FC = () => {
   const { user, userData } = useAuth();
-  const [levelIncomeTransactions, setLevelIncomeTransactions] = useState<LevelIncomeTransaction[]>([]);
-  const [userNames, setUserNames] = useState<{ [key: string]: string }>({});
+  const [transactions, setTransactions] = useState<IncomeTransaction[]>([]);
+  const [userNames, setUserNames] = useState<{ [key: string]: UserData }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedLevels, setExpandedLevels] = useState<{ [key: number]: boolean }>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showAllLevels, setShowAllLevels] = useState(false);
+  
+  // Filter and search states
+  const [activeTab, setActiveTab] = useState<'all' | 'level' | 're-level'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved'>('all');
+  const [levelFilter, setLevelFilter] = useState<'all' | string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [hasMore, setHasMore] = useState(true);
 
-  // Get current user's rank, default to Azurite
-  const currentRank = userData?.rank || 'Azurite';
-  const currentPayoutChart = rankPayoutCharts[currentRank as keyof typeof rankPayoutCharts] || rankPayoutCharts['Azurite'];
+  // Mobile accordion state
+  const [expandedCards, setExpandedCards] = useState<{ [key: string]: boolean }>({});
 
-  // Level colors for consistent theming (extended to 10 levels)
-  const levelColors = {
-    1: { bg: 'from-emerald-500 to-emerald-600', border: 'border-emerald-400', text: 'text-emerald-100', accent: 'bg-emerald-400' },
-    2: { bg: 'from-blue-500 to-blue-600', border: 'border-blue-400', text: 'text-blue-100', accent: 'bg-blue-400' },
-    3: { bg: 'from-purple-500 to-purple-600', border: 'border-purple-400', text: 'text-purple-100', accent: 'bg-purple-400' },
-    4: { bg: 'from-amber-500 to-amber-600', border: 'border-amber-400', text: 'text-amber-100', accent: 'bg-amber-400' },
-    5: { bg: 'from-pink-500 to-pink-600', border: 'border-pink-400', text: 'text-pink-100', accent: 'bg-pink-400' },
-    6: { bg: 'from-indigo-500 to-indigo-600', border: 'border-indigo-400', text: 'text-indigo-100', accent: 'bg-indigo-400' },
-    7: { bg: 'from-red-500 to-red-600', border: 'border-red-400', text: 'text-red-100', accent: 'bg-red-400' },
-    8: { bg: 'from-teal-500 to-teal-600', border: 'border-teal-400', text: 'text-teal-100', accent: 'bg-teal-400' },
-    9: { bg: 'from-orange-500 to-orange-600', border: 'border-orange-400', text: 'text-orange-100', accent: 'bg-orange-400' },
-    10: { bg: 'from-cyan-500 to-cyan-600', border: 'border-cyan-400', text: 'text-cyan-100', accent: 'bg-cyan-400' }
+  // Level percentages for reference (10 levels total)
+  const levelPercentages = {
+    1: 5,   // Level 1: 5%
+    2: 4,   // Level 2: 4%
+    3: 3,   // Level 3: 3%
+    4: 1,   // Level 4: 1%
+    5: 1,   // Level 5: 1%
+    6: 1,   // Level 6: 1%
+    7: 0.5, // Level 7: 0.5%
+    8: 0.5, // Level 8: 0.5%
+    9: 0.5, // Level 9: 0.5%
+    10: 0.5 // Level 10: 0.5%
   };
 
-  // Fetch user names for fromUserId
-  const fetchUserName = async (userId: string): Promise<string> => {
+  // Fetch user data for fromUser
+  const fetchUserData = useCallback(async (userId: string): Promise<UserData> => {
     if (userNames[userId]) {
       return userNames[userId];
     }
@@ -81,20 +87,28 @@ const LevelIncomePage: React.FC = () => {
       const userDoc = await getDoc(doc(db, 'users', userId));
       if (userDoc.exists()) {
         const userData = userDoc.data() as UserData;
-        const name = userData.displayName || userData.fullName || userData.email || 'Unknown User';
-        setUserNames(prev => ({ ...prev, [userId]: name }));
-        return name;
+        const userInfo = {
+          displayName: userData.displayName,
+          fullName: userData.fullName,
+          email: userData.email,
+          userCode: userData.userCode
+        };
+        setUserNames(prev => ({ ...prev, [userId]: userInfo }));
+        return userInfo;
       }
     } catch (error) {
-      console.error('Error fetching user name:', error);
+      console.error('Error fetching user data:', error);
     }
     
-    const fallbackName = `User ${userId.slice(0, 8)}...`;
-    setUserNames(prev => ({ ...prev, [userId]: fallbackName }));
-    return fallbackName;
-  };
+    const fallbackData = {
+      displayName: `User ${userId.slice(0, 8)}...`,
+      userCode: userId.slice(0, 8)
+    };
+    setUserNames(prev => ({ ...prev, [userId]: fallbackData }));
+    return fallbackData;
+  }, [userNames]);
 
-  // Setup real-time listener for level income transactions
+  // Setup real-time listener for income transactions
   useEffect(() => {
     if (!user?.uid) {
       setLoading(false);
@@ -104,95 +118,93 @@ const LevelIncomePage: React.FC = () => {
     const incomeTransactionsRef = collection(db, 'users', user.uid, 'incomeTransactions');
     const q = query(
       incomeTransactionsRef,
-      where('type', '==', 'level_income'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(itemsPerPage)
     );
 
-    const unsubscribe = onSnapshot(
-      q,
+    const unsubscribe = onSnapshot(q, 
       async (snapshot) => {
         try {
-          const transactions: LevelIncomeTransaction[] = [];
+          const transactionsList: IncomeTransaction[] = [];
           
-          for (const docSnap of snapshot.docs) {
-            const data = docSnap.data();
-            transactions.push({
-              id: docSnap.id,
-              amount: data.amount || 0,
-              fromUserId: data.fromUserId || '',
-              level: data.level || 1,
-              createdAt: data.createdAt,
-              status: data.status || 'completed',
-              type: 'level_income'
+          for (const docSnapshot of snapshot.docs) {
+            const data = docSnapshot.data();
+            transactionsList.push({
+              id: docSnapshot.id,
+              type: data.type,
+              fromUser: data.fromUser,
+              amount: data.amount,
+              level: data.level,
+              status: data.status,
+              createdAt: data.createdAt
             });
+
+            // Fetch user data for each transaction
+            await fetchUserData(data.fromUser);
           }
 
-          setLevelIncomeTransactions(transactions);
-
-          // Fetch user names for all fromUserIds
-          const userIds = [...new Set(transactions.map(t => t.fromUserId).filter(Boolean))];
-          for (const userId of userIds) {
-            await fetchUserName(userId);
-          }
-
-          setLoading(false);
-          setError(null);
+          setTransactions(transactionsList);
+           setHasMore(snapshot.docs.length === itemsPerPage);
+           setLoading(false);
         } catch (err) {
-          console.error('Error processing transactions:', err);
-          setError('Failed to load level income data');
+          console.error('Error fetching transactions:', err);
+          setError('Failed to load income transactions');
           setLoading(false);
         }
       },
       (err) => {
-        console.error('Error fetching level income transactions:', err);
-        setError('Failed to load level income data');
+        console.error('Error in transactions listener:', err);
+        setError('Failed to load income transactions');
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [user?.uid]);
+   }, [user?.uid, itemsPerPage, fetchUserData]);
 
-  // Toggle accordion level
-  const toggleLevel = (level: number) => {
-    setExpandedLevels(prev => ({
-      ...prev,
-      [level]: !prev[level]
-    }));
-  };
-
-  // Calculate summary statistics
-  const completedTransactions = levelIncomeTransactions.filter(t => t.status === 'completed');
-  const pendingTransactions = levelIncomeTransactions.filter(t => t.status === 'pending');
-  
-  const totalLevelIncome = completedTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const pendingIncome = pendingTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const totalTransactions = levelIncomeTransactions.length;
-  const highestTransaction = levelIncomeTransactions.length > 0 
-    ? Math.max(...levelIncomeTransactions.map(t => t.amount))
-    : 0;
-
-  // Get level-wise breakdown for 10 levels based on current rank
-  const levelBreakdown = Array.from({ length: 10 }, (_, index) => {
-    const level = index + 1;
-    const levelTransactions = levelIncomeTransactions.filter(t => t.level === level);
-    const completedLevelTransactions = levelTransactions.filter(t => t.status === 'completed');
-    const totalAmount = completedLevelTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const count = levelTransactions.length;
-    const perActivationIncome = currentPayoutChart[index] || 0;
-    const percentage = totalLevelIncome > 0 ? (totalAmount / totalLevelIncome) * 100 : 0;
-    return { 
-      level, 
-      totalAmount, 
-      count, 
-      perActivationIncome, 
-      percentage, 
-      transactions: levelTransactions 
-    };
+  // Filter transactions based on active filters
+  const filteredTransactions = transactions.filter(transaction => {
+    // Tab filter
+    if (activeTab === 'level' && transaction.type !== 'Level Income') return false;
+    if (activeTab === 're-level' && transaction.type !== 'Re-Level Income') return false;
+    
+    // Status filter
+    if (statusFilter !== 'all' && transaction.status !== statusFilter) return false;
+    
+    // Level filter
+    if (levelFilter !== 'all' && transaction.level.toString() !== levelFilter) return false;
+    
+    // Search filter
+    if (searchTerm) {
+      const userData = userNames[transaction.fromUser];
+      const searchableText = [
+        userData?.displayName,
+        userData?.fullName,
+        userData?.userCode,
+        transaction.type,
+        transaction.amount.toString(),
+        transaction.level.toString()
+      ].filter(Boolean).join(' ').toLowerCase();
+      
+      if (!searchableText.includes(searchTerm.toLowerCase())) return false;
+    }
+    
+    return true;
   });
 
-  // Determine which levels to show
-  const levelsToShow = showAllLevels ? levelBreakdown : levelBreakdown.slice(0, 3);
+  // Calculate summary data
+  const summaryData = {
+    totalLevelIncome: transactions
+      .filter(t => t.type === 'Level Income' && t.status === 'approved')
+      .reduce((sum, t) => sum + t.amount, 0),
+    totalReLevelIncome: transactions
+      .filter(t => t.type === 'Re-Level Income' && t.status === 'approved')
+      .reduce((sum, t) => sum + t.amount, 0),
+    availableBalance: userData?.availableBalance || 0,
+    pendingAmount: transactions
+      .filter(t => t.status === 'pending')
+      .reduce((sum, t) => sum + t.amount, 0)
+  };
 
   // Copy to clipboard function
   const copyToClipboard = async (text: string, id: string) => {
@@ -205,11 +217,17 @@ const LevelIncomePage: React.FC = () => {
     }
   };
 
-  // Format date for Indian locale
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-IN', {
+  // Toggle card expansion (mobile)
+  const toggleCardExpansion = (cardId: string) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [cardId]: !prev[cardId]
+    }));
+  };
+
+  // Format date
+  const formatDate = (timestamp: Timestamp) => {
+    return timestamp.toDate().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -218,288 +236,397 @@ const LevelIncomePage: React.FC = () => {
     });
   };
 
-  // Get status badge styling
-  const getStatusBadge = (status: string) => {
+  // Get status color
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'failed':
-        return 'bg-red-100 text-red-800 border-red-200';
+      case 'approved':
+        return 'bg-green-100 text-green-800 border-green-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
+  // Get level color
+  const getLevelColor = (level: number) => {
+    const colors = [
+      'bg-blue-100 text-blue-800',
+      'bg-purple-100 text-purple-800',
+      'bg-green-100 text-green-800',
+      'bg-yellow-100 text-yellow-800',
+      'bg-pink-100 text-pink-800',
+      'bg-indigo-100 text-indigo-800'
+    ];
+    return colors[(level - 1) % colors.length] || 'bg-gray-100 text-gray-800';
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-100 px-2 sm:px-0">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <span className="ml-3 text-gray-700">Loading level income data...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-100 px-2 sm:px-0">
-        <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-6 text-center">
-          <p className="text-red-600 font-medium">{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-          >
-            Retry
-          </button>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-slate-700 rounded w-1/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-32 bg-slate-700 rounded-2xl"></div>
+              ))}
+            </div>
+            <div className="h-96 bg-slate-700 rounded-2xl"></div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 via-blue-50 to-indigo-100">
-      <div className="px-2 sm:px-4 lg:px-6 py-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Level Income Dashboard</h1>
-          <p className="text-gray-600">Track your multi-level commission earnings for {currentRank} rank</p>
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-white">
+            Level Income & Re-Level Income
+          </h1>
+          <p className="text-slate-300 text-lg">
+            Track your earnings from team activations and rank upgrades
+          </p>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total Level Income Card */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 rounded-2xl p-6 shadow-xl border border-emerald-400/20">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
-                <span className="text-emerald-200 text-sm font-medium">TOTAL</span>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-1">${totalLevelIncome.toFixed(2)}</h3>
-              <p className="text-emerald-200 text-sm">Level Income Earned</p>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-6 shadow-md">
+            <div className="text-blue-100 text-sm font-medium">Total Level Income</div>
+            <div className="text-white text-2xl font-bold">${summaryData.totalLevelIncome.toFixed(2)}</div>
           </div>
-
-          {/* Pending Income Card */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-amber-600 via-orange-600 to-red-600 rounded-2xl p-6 shadow-xl border border-amber-400/20">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <span className="text-amber-200 text-sm font-medium">PENDING</span>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-1">${pendingIncome.toFixed(2)}</h3>
-              <p className="text-amber-200 text-sm">Pending Income</p>
-            </div>
+          
+          <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-2xl p-6 shadow-md">
+            <div className="text-purple-100 text-sm font-medium">Total Re-Level Income</div>
+            <div className="text-white text-2xl font-bold">${summaryData.totalReLevelIncome.toFixed(2)}</div>
           </div>
-
-          {/* Highest Transaction Card */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 rounded-2xl p-6 shadow-xl border border-purple-400/20">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
-                <span className="text-purple-200 text-sm font-medium">HIGHEST</span>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-1">${highestTransaction.toFixed(2)}</h3>
-              <p className="text-purple-200 text-sm">Highest Transaction</p>
-            </div>
+          
+          <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-2xl p-6 shadow-md">
+            <div className="text-green-100 text-sm font-medium">Available Balance</div>
+            <div className="text-white text-2xl font-bold">${summaryData.availableBalance.toFixed(2)}</div>
           </div>
-
-          {/* Total Transactions Card */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-800 rounded-2xl p-6 shadow-xl border border-blue-400/20">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <span className="text-blue-200 text-sm font-medium">COUNT</span>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-1">{totalTransactions}</h3>
-              <p className="text-blue-200 text-sm">Total Transactions</p>
-            </div>
+          
+          <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 rounded-2xl p-6 shadow-md">
+            <div className="text-yellow-100 text-sm font-medium">Pending Amount</div>
+            <div className="text-white text-2xl font-bold">${summaryData.pendingAmount.toFixed(2)}</div>
           </div>
         </div>
 
-        {/* Level Income Breakdown */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
-          <div className="p-6 border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Level Income Breakdown</h2>
-                <p className="text-gray-600">10-level matrix for {currentRank} rank</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Current Rank:</span>
-                <span className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full text-sm font-medium">
-                  {currentRank}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Level Cards Grid */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {levelsToShow.map(({ level, totalAmount, count, perActivationIncome, percentage, transactions }) => {
-                const colors = levelColors[level as keyof typeof levelColors];
-                const isExpanded = expandedLevels[level];
-                
-                return (
-                  <div key={level} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300">
-                    {/* Card Header */}
-                    <div className={`bg-gradient-to-r ${colors.bg} p-4`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">{level}</span>
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-bold text-white">Level {level}</h3>
-                            <p className="text-white/80 text-sm">${perActivationIncome} per activation</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card Body */}
-                    <div className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">Total Earned:</span>
-                          <span className="font-bold text-gray-800">${totalAmount.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">Transactions:</span>
-                          <span className="font-medium text-gray-700">{count}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">Status:</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${count > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                            {count > 0 ? 'Active' : 'No Earnings'}
-                          </span>
-                        </div>
-                        
-                        {/* Progress Bar */}
-                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full bg-gradient-to-r ${colors.bg} transition-all duration-500`}
-                            style={{ width: `${Math.min(percentage, 100)}%` }}
-                          ></div>
-                        </div>
-                        
-                        {/* Expand/Collapse Button */}
-                        {transactions.length > 0 && (
-                          <button
-                            onClick={() => toggleLevel(level)}
-                            className="w-full mt-3 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center justify-center space-x-2"
-                          >
-                            <span className="text-sm font-medium">
-                              {isExpanded ? 'Hide Details' : 'View Details'}
-                            </span>
-                            {isExpanded ? (
-                              <ChevronUpIcon className="w-4 h-4" />
-                            ) : (
-                              <ChevronDownIcon className="w-4 h-4" />
-                            )}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Expanded Transaction Details */}
-                      {isExpanded && transactions.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-gray-200 space-y-3 animate-in slide-in-from-top duration-300">
-                          {transactions.slice(0, 3).map((transaction) => (
-                            <div 
-                              key={transaction.id} 
-                              className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
-                            >
-                              <div className="flex flex-col space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <p className="text-sm font-medium text-gray-800">
-                                    {userNames[transaction.fromUserId] || 'Loading...'}
-                                  </p>
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(transaction.status)}`}>
-                                    {transaction.status}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <p className="text-xs text-gray-600">{formatDate(transaction.createdAt)}</p>
-                                  <p className="text-sm font-bold text-gray-800">${transaction.amount.toFixed(2)}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          {transactions.length > 3 && (
-                            <p className="text-xs text-gray-500 text-center">
-                              +{transactions.length - 3} more transactions
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* View More/Less Button */}
-            <div className="text-center">
-              <button
-                onClick={() => setShowAllLevels(!showAllLevels)}
-                className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                {showAllLevels ? (
-                  <>
-                    <EyeSlashIcon className="w-5 h-5" />
-                    <span>View Less</span>
-                  </>
-                ) : (
-                  <>
-                    <EyeIcon className="w-5 h-5" />
-                    <span>View More ({levelBreakdown.length - 3} more levels)</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Commission Structure Info */}
-        <div className="bg-gradient-to-br from-emerald-600/20 via-emerald-700/20 to-green-600/20 border border-emerald-500/30 rounded-2xl p-6 backdrop-blur-sm">
-          <h3 className="text-xl font-bold text-emerald-300 mb-4">{currentRank} Rank - Commission Structure</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            {currentPayoutChart.map((amount, index) => (
-              <div key={index + 1} className="flex items-center justify-between p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                <span className="text-emerald-700 font-medium text-sm">L{index + 1}</span>
-                <span className="text-emerald-800 font-bold text-sm">${amount}</span>
+        {/* Level Percentages Info */}
+        <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-6 shadow-md">
+          <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+            <InformationCircleIcon className="h-5 w-5 text-blue-400" />
+            Level Income Structure
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {Object.entries(levelPercentages).map(([level, percentage]) => (
+              <div key={level} className="bg-slate-600 rounded-lg p-3 text-center">
+                <div className="text-slate-300 text-sm">Level {level}</div>
+                <div className="text-white font-bold text-lg">{percentage}%</div>
               </div>
             ))}
           </div>
-          <div className="mt-4 text-emerald-700 text-sm space-y-1">
-            <p>• Earn commissions from 10 levels deep in your network</p>
-            <p>• Real-time tracking and instant payouts</p>
-            <p>• Higher amounts for closer levels in {currentRank} rank</p>
+          <div className="mt-4 p-4 bg-blue-900/30 rounded-lg border border-blue-500/30">
+            <p className="text-blue-200 text-sm">
+              <strong>How it works:</strong> When your referrals make topups or activations, you earn income based on their level in your team. 
+              Level 1 (direct referrals) gives you 5%, Level 2 gives 4%, and so on down to Level 10.
+            </p>
           </div>
         </div>
+        <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-6 shadow-md space-y-4">
+          {/* Tabs */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: 'all', label: 'All Transactions' },
+              { key: 'level', label: 'Level Income' },
+              { key: 're-level', label: 'Re-Level Income' }
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as 'all' | 'level' | 're-level')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search and Filter Toggle */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by user, amount, level..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors"
+            >
+              <FunnelIcon className="h-5 w-5" />
+              Filters
+              {showFilters ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
+            </button>
+          </div>
+
+          {/* Filters */}
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-600">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'approved')}
+                  className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Level</label>
+                <select
+                  value={levelFilter}
+                  onChange={(e) => setLevelFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Levels</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
+                    <option key={level} value={level.toString()}>
+                      Level {level} ({levelPercentages[level as keyof typeof levelPercentages]}%)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Transactions */}
+        <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl shadow-md overflow-hidden">
+          {error ? (
+            <div className="p-6 text-center">
+              <div className="text-red-400 text-lg font-medium">{error}</div>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="p-6 text-center">
+              <div className="text-slate-400 text-lg">No transactions found</div>
+              <div className="text-slate-500 text-sm mt-2">
+                {searchTerm || statusFilter !== 'all' || levelFilter !== 'all' 
+                  ? 'Try adjusting your filters'
+                  : 'Income transactions will appear here when available'
+                }
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-700">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">From User</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Level</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-600">
+                    {filteredTransactions.map((transaction) => {
+                      const userData = userNames[transaction.fromUser];
+                      return (
+                        <tr key={transaction.id} className="hover:bg-slate-600 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              transaction.type === 'Level Income' 
+                                ? 'bg-blue-100 text-blue-800' 
+                                : 'bg-purple-100 text-purple-800'
+                            }`}>
+                              {transaction.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-white font-medium">
+                              {userData?.displayName || userData?.fullName || 'Loading...'}
+                            </div>
+                            <div className="text-slate-400 text-sm">
+                              {userData?.userCode || transaction.fromUser.slice(0, 8)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-white font-medium">
+                            ${transaction.amount.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getLevelColor(transaction.level)}`}>
+                              Level {transaction.level}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(transaction.status)}`}>
+                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-slate-300 text-sm">
+                            {formatDate(transaction.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={() => copyToClipboard(userData?.userCode || transaction.fromUser, transaction.id)}
+                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                            >
+                              {copiedId === transaction.id ? (
+                                <CheckIcon className="h-5 w-5" />
+                              ) : (
+                                <ClipboardIcon className="h-5 w-5" />
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-4 p-4">
+                {filteredTransactions.map((transaction) => {
+                  const userData = userNames[transaction.fromUser];
+                  const isExpanded = expandedCards[transaction.id];
+                  
+                  return (
+                    <div key={transaction.id} className="bg-slate-600 rounded-2xl shadow-md overflow-hidden">
+                      <div 
+                        className="p-4 cursor-pointer"
+                        onClick={() => toggleCardExpansion(transaction.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                                transaction.type === 'Level Income' 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : 'bg-purple-100 text-purple-800'
+                              }`}>
+                                {transaction.type}
+                              </span>
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(transaction.status)}`}>
+                                {transaction.status}
+                              </span>
+                            </div>
+                            <div className="text-white font-medium">
+                              ${transaction.amount.toFixed(2)}
+                            </div>
+                            <div className="text-slate-400 text-sm">
+                              From: {userData?.displayName || userData?.fullName || 'Loading...'}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getLevelColor(transaction.level)}`}>
+                              L{transaction.level}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUpIcon className="h-5 w-5 text-slate-400" />
+                            ) : (
+                              <ChevronDownIcon className="h-5 w-5 text-slate-400" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {isExpanded && (
+                        <div className="px-4 pb-4 border-t border-slate-500 pt-4 space-y-3">
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <div className="text-slate-400">User Code</div>
+                              <div className="text-white font-medium">
+                                {userData?.userCode || transaction.fromUser.slice(0, 8)}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-slate-400">Date</div>
+                              <div className="text-white">
+                                {formatDate(transaction.createdAt)}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToClipboard(userData?.userCode || transaction.fromUser, transaction.id);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            {copiedId === transaction.id ? (
+                              <>
+                                <CheckIcon className="h-4 w-4" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <ClipboardIcon className="h-4 w-4" />
+                                Copy User Code
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {filteredTransactions.length > 0 && (
+          <div className="flex items-center justify-between bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-4 shadow-md">
+            <div className="text-slate-300 text-sm">
+              Showing {filteredTransactions.length} transactions
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg bg-slate-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-500 transition-colors"
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+              </button>
+              
+              <span className="px-3 py-1 bg-slate-600 text-white rounded-lg">
+                {currentPage}
+              </span>
+              
+              <button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={!hasMore}
+                className="p-2 rounded-lg bg-slate-600 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-500 transition-colors"
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
+import LandingPage from './pages/LandingPage';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
 import UserDetails from './pages/UserDetails';
@@ -16,6 +17,12 @@ import AdminTopUpRequests from './components/AdminTopUpRequests';
 import AdminWithdrawalPanel from './components/admin/AdminWithdrawalPanel';
 import MyTicketsPage from './pages/MyTicketsPage';
 import AdminTicketsPage from './pages/AdminTicketsPage';
+import AdminRoute from './components/AdminRoute';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UsersManagement from './pages/admin/UsersManagement';
+import WithdrawalsManagement from './pages/admin/WithdrawalsManagement';
+import TopupsManagement from './pages/admin/TopupsManagement';
+import AdminSettings from './pages/admin/AdminSettings';
 
 import WalletPage from './pages/WalletPage';
 import WithdrawalPage from './pages/WithdrawalPage';
@@ -36,12 +43,8 @@ const AppContent: React.FC = () => {
         element={currentUser ? <Navigate to="/dashboard" replace /> : <Signup />} 
       />
       <Route 
-        path="/user-details" 
-        element={
-          <ProtectedRoute>
-            <UserDetails />
-          </ProtectedRoute>
-        } 
+        path="/user-details/:userId" 
+        element={<UserDetails />} 
       />
       
       {/* Dashboard Routes with Layout */}
@@ -140,40 +143,90 @@ const AppContent: React.FC = () => {
       
       {/* Admin Routes */}
       <Route 
-        path="/admin/tickets" 
+        path="/admin" 
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <DashboardLayout>
-              <AdminTicketsPage />
+              <AdminDashboard />
             </DashboardLayout>
-          </ProtectedRoute>
+          </AdminRoute>
         } 
       />
       <Route 
-        path="/admin/topup-requests" 
+        path="/admin/users" 
         element={
-          <ProtectedRoute>
+          <AdminRoute>
             <DashboardLayout>
-              <AdminTopUpRequests />
+              <UsersManagement />
             </DashboardLayout>
-          </ProtectedRoute>
+          </AdminRoute>
         } 
       />
       <Route 
         path="/admin/withdrawals" 
         element={
-          <ProtectedRoute>
+          <AdminRoute>
+            <DashboardLayout>
+              <WithdrawalsManagement />
+            </DashboardLayout>
+          </AdminRoute>
+        } 
+      />
+      <Route 
+        path="/admin/topups" 
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <TopupsManagement />
+            </DashboardLayout>
+          </AdminRoute>
+        } 
+      />
+      <Route 
+        path="/admin/settings" 
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <AdminSettings />
+            </DashboardLayout>
+          </AdminRoute>
+        } 
+      />
+      <Route 
+        path="/admin/tickets" 
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <AdminTicketsPage />
+            </DashboardLayout>
+          </AdminRoute>
+        } 
+      />
+      <Route 
+        path="/admin/topup-requests" 
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <AdminTopUpRequests />
+            </DashboardLayout>
+          </AdminRoute>
+        } 
+      />
+      <Route 
+        path="/admin/withdrawals-old" 
+        element={
+          <AdminRoute>
             <DashboardLayout>
               <AdminWithdrawalPanel />
             </DashboardLayout>
-          </ProtectedRoute>
+          </AdminRoute>
         } 
       />
       
       {/* Root Route */}
       <Route 
         path="/" 
-        element={<Navigate to={currentUser ? "/dashboard" : "/login"} replace />} 
+        element={currentUser ? <Navigate to="/dashboard" replace /> : <LandingPage />} 
       />
     </Routes>
   );

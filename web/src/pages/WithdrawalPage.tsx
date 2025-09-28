@@ -4,13 +4,13 @@ import {
   doc, 
   getDoc, 
   collection, 
-  addDoc, 
   query, 
   where, 
   orderBy, 
   onSnapshot, 
   runTransaction,
-  serverTimestamp 
+  serverTimestamp,
+  Timestamp 
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { 
@@ -31,8 +31,8 @@ interface WithdrawalData {
   amountToSend: number;
   address: string;
   status: 'pending' | 'approved' | 'rejected';
-  createdAt: any;
-  approvedAt?: any;
+  createdAt: Timestamp | Date;
+  approvedAt?: Timestamp | Date;
   processedBy?: string;
   notes?: string;
 }
@@ -172,8 +172,13 @@ const WithdrawalPage: React.FC = () => {
       setAmount('');
       setAddress('');
       
-    } catch (error: any) {
-      setError(error.message || 'Failed to submit withdrawal request');
+    } catch (error: unknown) {
+      console.error('Error submitting withdrawal:', error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Failed to submit withdrawal request');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -183,9 +188,9 @@ const WithdrawalPage: React.FC = () => {
     return `${amount.toFixed(2)} USDT`;
   };
 
-  const formatDate = (timestamp: any) => {
+  const formatDate = (timestamp: Timestamp | Date | null | undefined) => {
     if (!timestamp) return 'N/A';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
   };
 

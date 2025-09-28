@@ -16,10 +16,6 @@ import {
   WalletIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  CalendarIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  XCircleIcon,
 } from '@heroicons/react/24/outline';
 
 interface WalletData {

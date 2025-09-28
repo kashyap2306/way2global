@@ -3,7 +3,6 @@ import {
   getDoc, 
   setDoc, 
   updateDoc, 
-  deleteDoc, 
   collection, 
   addDoc, 
   query, 
@@ -14,10 +13,10 @@ import {
   serverTimestamp, 
   Timestamp,
   arrayUnion,
-  arrayRemove,
   increment,
   writeBatch,
-  type DocumentReference
+  type DocumentReference,
+  type FieldValue
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -50,11 +49,33 @@ export interface MLMUser {
   status: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  lastLoginAt?: Timestamp;
+  // Admin fields
+  role?: 'user' | 'admin' | 'superadmin' | 'moderator';
+  isAdmin?: boolean;
+  // Global income fields
+  globalIncomeEarned?: number;
+  currentPool?: string;
+  poolPosition?: number;
+  poolsCompleted?: number;
+  // Level-wise income tracking
+  levelIncomes?: {
+    level1: number;
+    level2: number;
+    level3: number;
+    level4: number;
+    level5: number;
+  };
+  // Direct referrals count
+  directReferralsCount?: number;
+  // ID activation status
+  isIdActivated?: boolean;
+  idActivatedAt?: Timestamp;
 }
 
 export interface Transaction {
   txId: string;
-  type: 'activation' | 'topup' | 're-topup' | 'withdrawal' | 'referral_commission' | 'global_income' | 'level_income';
+  type: 'activation' | 'topup' | 're-topup' | 'withdrawal' | 'referral_commission' | 'global_income' | 'level_income' | 'rank_upgrade';
   amount: number;
   currency: string;
   status: 'pending' | 'completed' | 'failed';
@@ -123,10 +144,20 @@ export interface Withdrawal {
 }
 
 export interface Reid {
+  id: string;
   reid: string;
   userId: string;
+  reidNumber: number;
+  rank: string;
   originRank: string;
   originCycle: number;
+  isActive: boolean;
+  activationAmount: number;
+  totalEarnings: number;
+  directReferrals: string[];
+  createdAt: Timestamp;
+  activatedAt?: Timestamp;
+  cycleCompletions: number;
   generatedAt: Timestamp;
   status: 'active' | 'used' | 'expired';
   linkedToTx: string | null;
@@ -178,8 +209,9 @@ export interface AuditLog {
     type: string;
     id: string;
   };
-  details: string;
-  createdAt: Timestamp;
+  details?: string | Record<string, any>;
+  targetType?: string;
+  createdAt: Timestamp | FieldValue;
 }
 
 export interface Cycle {
@@ -491,15 +523,18 @@ export const generateREIDFromGlobalCycle = async (
     await createAuditLog({
       action: 'reid_generated',
       targetType: 'reid',
-      targetId: reidRef.id,
-      performedBy: originalUID,
-      details: {
+      target: {
+        type: 'reid',
+        id: reidRef.id
+      },
+      details: JSON.stringify({
         originalUID,
         rank,
         reidNumber,
         triggeredBy: 'global_cycle_completion',
-        parentCycleId: cycleId
-      }
+        parentCycleId: cycleId,
+        performedBy: originalUID
+      })
     });
 
     return reidRef.id;
@@ -521,8 +556,8 @@ export const getUserREIDs = async (userId: string): Promise<Reid[]> => {
     
     return reidsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
-    } as Reid));
+      ...(doc.data() as Omit<Reid, 'id'>)
+    }));
   } catch (error) {
     console.error('Error fetching user REIDs:', error);
     throw error;
@@ -554,12 +589,16 @@ export const activateREID = async (
     await createAuditLog({
       action: 'reid_activated',
       targetType: 'reid',
-      targetId: reidId,
-      performedBy: 'system', // Will be updated with actual user ID in real implementation
-      details: {
+      target: {
+        type: 'reid',
+        id: reidId
+      },
+      details: JSON.stringify({
+        performedBy: 'system',
         activationAmount,
         sponsorREID
-      }
+      }),
+      createdAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Error activating REID:', error);
@@ -584,12 +623,16 @@ export const updateREIDEarnings = async (
     await createAuditLog({
       action: 'reid_earnings_updated',
       targetType: 'reid',
-      targetId: reidId,
-      performedBy: 'system',
-      details: {
+      target: {
+        type: 'reid',
+        id: reidId
+      },
+      details: JSON.stringify({
+        performedBy: 'system',
         earningsAmount,
         incomeType
-      }
+      }),
+      createdAt: serverTimestamp()
     });
   } catch (error) {
     console.error('Error updating REID earnings:', error);
@@ -673,15 +716,18 @@ export const processGlobalCyclePayout = async (
     await createAuditLog({
       action: 'global_cycle_completed',
       targetType: 'globalCycle',
-      targetId: cycleId,
-      performedBy: 'system',
-      details: {
+      target: {
+        type: 'globalCycle',
+        id: cycleId
+      },
+      details: JSON.stringify({
+        performedBy: 'system',
         participants: participants.length,
         payoutAmount,
         rank,
         processedPayouts: processedPayouts.length,
         generatedREIDs: generatedREIDs.length
-      }
+      })
     });
 
     return { processedPayouts, generatedREIDs };
@@ -1092,7 +1138,9 @@ export const addToGlobalCycle = async (userId: string, rank: string, activationA
       
       // If cycle is now complete, process global cycle payouts
       if ((cycleData.currentParticipants || 0) + 1 >= (cycleData.maxParticipants || 10)) {
-        await processGlobalCyclePayout(cycleRef.id, rank);
+        const participants = cycleData.participants || [];
+        const payoutAmount = (cycleData.totalAmount || 0) / (cycleData.maxParticipants || 10);
+        await processGlobalCyclePayout(cycleRef.id, participants, payoutAmount, rank);
       }
     }
     
@@ -1218,6 +1266,7 @@ export const processRankUpgrade = async (
             uplineUserId,
             levelIncomeAmount,
             newRank,
+            1, // cycle number
             level,
             uid,
             currency

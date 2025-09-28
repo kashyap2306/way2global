@@ -18,7 +18,6 @@ export interface DashboardData {
   globalIncome: number;
   reGlobalIncome: number;
   levelIncome: number;
-  reLevelIncome: number;
   directReferralCount: number;
   totalTeamCount: number;
   walletBalance: number;
@@ -31,7 +30,6 @@ const INCOME_TYPE_MAPPING = {
   'level': 'levelIncome',
   'global': 'globalIncome',
   're-topup': 'reTopupIncome',
-  're-level': 'reLevelIncome',
   're-global': 'reGlobalIncome'
 } as const;
 
@@ -54,7 +52,6 @@ export class DashboardService {
         globalIncome: 0,
         reGlobalIncome: 0,
         levelIncome: 0,
-        reLevelIncome: 0,
         directReferralCount: 0,
         totalTeamCount: 0,
         walletBalance: 0,
@@ -160,15 +157,6 @@ export class DashboardService {
    * Fetch and process income data
    */
   private async fetchIncomeData(userId: string): Promise<Partial<DashboardData>> {
-    const incomeData: Partial<DashboardData> = {
-      topUpIncome: 0,
-      reTopupIncome: 0,
-      globalIncome: 0,
-      reGlobalIncome: 0,
-      levelIncome: 0,
-      reLevelIncome: 0,
-    };
-
     const incomesQuery = query(
       collection(db, 'users', userId, 'incomes'),
       orderBy('createdAt', 'desc')
@@ -188,7 +176,6 @@ export class DashboardService {
       globalIncome: 0,
       reGlobalIncome: 0,
       levelIncome: 0,
-      reLevelIncome: 0,
     };
 
     snapshot.forEach((doc: any) => {
@@ -278,16 +265,14 @@ export class DashboardService {
         data.reTopupIncome + 
         data.globalIncome + 
         data.reGlobalIncome + 
-        data.levelIncome + 
-        data.reLevelIncome;
+        data.levelIncome;
 
       const activeIncomeStreams = [
         data.topUpIncome,
         data.reTopupIncome,
         data.globalIncome,
         data.reGlobalIncome,
-        data.levelIncome,
-        data.reLevelIncome
+        data.levelIncome
       ].filter(income => income > 0).length;
 
       // Calculate monthly growth (simplified - would need historical data for accurate calculation)

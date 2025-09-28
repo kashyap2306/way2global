@@ -30,7 +30,7 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 // Initialize Firebase Functions and get a reference to the service
-export const functions = getFunctions(app);
+export const functions = getFunctions(app, 'us-central1');
 
 // Initialize Firebase Storage and get a reference to the service
 export const storage = getStorage(app);

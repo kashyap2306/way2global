@@ -1,22 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import DashboardCards from '../components/dashboard/DashboardCards';
-import { ClipboardDocumentIcon as CopyIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentIcon as CopyIcon, CheckIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { getUserGlobalPoolStatus } from '../services/globalIncomeService';
 
 interface UserData {
   uid: string;
   displayName: string;
   userCode: string;
-  rank: string;
   isActive: boolean;
-  balance: number;
-  totalEarnings: number;
-  referrals: any[];
-  activationAmount: number;
-  cyclesCompleted: number;
-  createdAt: any;
+}
+
+interface GlobalPoolStatus {
+  levels: Array<{
+    level: number;
+    position: number;
+    status: string;
+    totalEarned: number;
+    maxIncome: number;
+    progress: number;
+  }>;
 }
 
 const HomePage: React.FC = () => {
@@ -25,14 +30,9 @@ const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [referralLink, setReferralLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [globalPoolStatus, setGlobalPoolStatus] = useState<GlobalPoolStatus | null>(null);
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchUserData();
-    }
-  }, [currentUser]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     try {
       const userDocRef = doc(db, 'users', currentUser?.uid || '');
       const userSnap = await getDoc(userDocRef);
@@ -43,20 +43,24 @@ const HomePage: React.FC = () => {
 
         const baseUrl = window.location.origin;
         setReferralLink(`${baseUrl}/signup?ref=${data.userCode}`);
+
+        if (data.isActive) {
+          const poolStatus = await getUserGlobalPoolStatus(currentUser?.uid || '');
+          setGlobalPoolStatus(poolStatus);
+        }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser?.uid]);
 
-  const copyReferralLink = () => {
-    if (!referralLink) return;
-    navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  useEffect(() => {
+    if (currentUser) {
+      fetchUserData();
+    }
+  }, [currentUser, fetchUserData]);
 
   return (
     <div className="space-y-4 sm:space-y-6 px-0 sm:px-4">
@@ -91,16 +95,6 @@ const HomePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Rank */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
-                Rank
-              </label>
-              <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600/30">
-                <p className="text-white font-semibold">{userData.rank}</p>
-              </div>
-            </div>
-
             {/* Status */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
@@ -113,11 +107,63 @@ const HomePage: React.FC = () => {
                 {!userData.isActive && <span className="w-4 h-4 bg-red-500 rounded-full"></span>}
               </div>
             </div>
+
+            {/* Rank */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
+                Rank
+              </label>
+              <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600/30">
+                <p className="text-white font-semibold">
+                  {userData.isActive ? 'Azurite' : 'Coming Soon'}
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <p className="text-slate-400">Unable to load user details</p>
         )}
       </div>
+
+      {/* Global Pool Status */}
+      {userData?.isActive && globalPoolStatus && globalPoolStatus.levels.length > 0 && (
+        <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 rounded-xl shadow-lg p-4 sm:p-6 backdrop-blur-sm border border-slate-700/50">
+          <div className="flex items-center gap-2 mb-4">
+            <SparklesIcon className="w-6 h-6 text-blue-400" />
+            <h3 className="text-lg font-semibold text-white">Global Pool Status</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {globalPoolStatus.levels.map((pool, index) => (
+              <div key={index} className="bg-slate-800/50 rounded-lg p-4 border border-slate-600/30">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-white font-semibold">Level {pool.level}</h4>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    pool.status === 'completed' 
+                      ? 'bg-green-500/20 text-green-400' 
+                      : 'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    {pool.status === 'completed' ? 'Completed' : 'Active'}
+                  </span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Position:</span>
+                    <span className="text-white">{pool.position}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Income Earned:</span>
+                    <span className="text-green-400 font-semibold">${pool.totalEarned.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Progress:</span>
+                    <span className="text-blue-400">{pool.progress.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Referral Link */}
       <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 rounded-xl shadow-lg p-4 sm:p-6 backdrop-blur-sm border border-slate-700/50">
@@ -130,7 +176,11 @@ const HomePage: React.FC = () => {
             className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600/30 rounded-lg text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
           <button
-            onClick={copyReferralLink}
+            onClick={() => {
+              navigator.clipboard.writeText(referralLink);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }}
             className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 text-sm sm:text-base whitespace-nowrap flex items-center gap-2"
           >
             {copied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
@@ -145,7 +195,7 @@ const HomePage: React.FC = () => {
       {/* Dashboard Cards */}
       <div className="rounded-xl shadow-lg p-4 sm:p-6 border border-slate-700/50">
         <div className="grid grid-cols-1 gap-4">
-          <DashboardCards fullWidth />
+          <DashboardCards />
         </div>
       </div>
     </div>

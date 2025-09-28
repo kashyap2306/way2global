@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   collection, 
   query, 
@@ -16,7 +16,6 @@ import {
   CheckCircleIcon, 
   XCircleIcon, 
   ClockIcon,
-  ExclamationTriangleIcon,
   CurrencyDollarIcon,
   UserIcon
 } from '@heroicons/react/24/outline';

@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { createAllUserDocuments, checkUserDocumentsExist } from '../services/userSignupService';
 
@@ -35,6 +35,7 @@ interface MLMUserData {
   lastLoginAt?: any;
   isActive: boolean;
   role?: 'user' | 'admin';
+  isAdmin?: boolean;
   // Additional MLM fields
   level?: number;
   pendingBalance?: number;
@@ -126,7 +127,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const completeUserData: MLMUserData = {
         ...userData,
         uid,
-        lastLoginAt: serverTimestamp()
+        lastLoginAt: serverTimestamp(),
+        isAdmin: userData.role === 'admin'
       };
       
       // Update last login time

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, getDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { TrendingUp, Clock, DollarSign, CheckCircle, Users, AlertCircle, XCircle, Target, Award, Zap } from 'lucide-react';
+import { TrendingUp, Clock, DollarSign, CheckCircle, AlertCircle, XCircle, Target, Zap } from 'lucide-react';
 
 interface GlobalIncomeTransaction {
   id: string;
@@ -12,7 +12,7 @@ interface GlobalIncomeTransaction {
   fromUserId: string;
   fromUserName?: string;
   status: 'pending' | 'completed' | 'failed';
-  createdAt: any;
+  createdAt: Date | { toDate(): Date };
   transactionHash?: string;
 }
 
@@ -37,44 +37,52 @@ const GlobalIncomePage: React.FC = () => {
   const { userData } = useAuth();
   const [transactions, setTransactions] = useState<GlobalIncomeTransaction[]>([]);
   const [userDetails, setUserDetails] = useState<UserData | null>(null);
-  const [ranks, setRanks] = useState<RankData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set());
   const [activationModal, setActivationModal] = useState(false);
   const [transactionHash, setTransactionHash] = useState('');
   const [directReferralsCount, setDirectReferralsCount] = useState(0);
 
-  // Rank definitions with TopUp amounts and level distributions
+  // Rank definitions with TopUp amounts and level distributions (Complete 10 ranks from Azurite to Jeremejevite)
   const rankDefinitions: RankData[] = [
     {
       rank: 'Azurite',
+      topUpAmount: 5,
+      levels: [
+        { level: 1, amount: 1 }, { level: 2, amount: 0.8 }, { level: 3, amount: 0.6 },
+        { level: 4, amount: 0.4 }, { level: 5, amount: 0.3 }, { level: 6, amount: 0.25 },
+        { level: 7, amount: 0.2 }, { level: 8, amount: 0.15 }, { level: 9, amount: 0.1 },
+        { level: 10, amount: 0.05 }
+      ]
+    },
+    {
+      rank: 'Benitoite',
       topUpAmount: 10,
       levels: [
-        { level: 1, amount: 2 }, { level: 2, amount: 1.5 }, { level: 3, amount: 1 },
+        { level: 1, amount: 2 }, { level: 2, amount: 1.6 }, { level: 3, amount: 1.2 },
         { level: 4, amount: 0.8 }, { level: 5, amount: 0.6 }, { level: 6, amount: 0.5 },
         { level: 7, amount: 0.4 }, { level: 8, amount: 0.3 }, { level: 9, amount: 0.2 },
         { level: 10, amount: 0.1 }
       ]
     },
     {
-      rank: 'Sapphire',
+      rank: 'Citrine',
       topUpAmount: 25,
       levels: [
         { level: 1, amount: 5 }, { level: 2, amount: 4 }, { level: 3, amount: 3 },
-        { level: 4, amount: 2.5 }, { level: 5, amount: 2 }, { level: 6, amount: 1.5 },
-        { level: 7, amount: 1.2 }, { level: 8, amount: 1 }, { level: 9, amount: 0.8 },
-        { level: 10, amount: 0.5 }
+        { level: 4, amount: 2 }, { level: 5, amount: 1.5 }, { level: 6, amount: 1.25 },
+        { level: 7, amount: 1 }, { level: 8, amount: 0.75 }, { level: 9, amount: 0.5 },
+        { level: 10, amount: 0.25 }
       ]
     },
     {
-      rank: 'Ruby',
+      rank: 'Danburite',
       topUpAmount: 50,
       levels: [
         { level: 1, amount: 10 }, { level: 2, amount: 8 }, { level: 3, amount: 6 },
-        { level: 4, amount: 5 }, { level: 5, amount: 4 }, { level: 6, amount: 3 },
-        { level: 7, amount: 2.5 }, { level: 8, amount: 2 }, { level: 9, amount: 1.5 },
-        { level: 10, amount: 1 }
+        { level: 4, amount: 4 }, { level: 5, amount: 3 }, { level: 6, amount: 2.5 },
+        { level: 7, amount: 2 }, { level: 8, amount: 1.5 }, { level: 9, amount: 1 },
+        { level: 10, amount: 0.5 }
       ]
     },
     {
@@ -82,19 +90,59 @@ const GlobalIncomePage: React.FC = () => {
       topUpAmount: 100,
       levels: [
         { level: 1, amount: 20 }, { level: 2, amount: 16 }, { level: 3, amount: 12 },
-        { level: 4, amount: 10 }, { level: 5, amount: 8 }, { level: 6, amount: 6 },
-        { level: 7, amount: 5 }, { level: 8, amount: 4 }, { level: 9, amount: 3 },
-        { level: 10, amount: 2 }
+        { level: 4, amount: 8 }, { level: 5, amount: 6 }, { level: 6, amount: 5 },
+        { level: 7, amount: 4 }, { level: 8, amount: 3 }, { level: 9, amount: 2 },
+        { level: 10, amount: 1 }
       ]
     },
     {
-      rank: 'Diamond',
+      rank: 'Fluorite',
       topUpAmount: 250,
       levels: [
         { level: 1, amount: 50 }, { level: 2, amount: 40 }, { level: 3, amount: 30 },
-        { level: 4, amount: 25 }, { level: 5, amount: 20 }, { level: 6, amount: 15 },
-        { level: 7, amount: 12 }, { level: 8, amount: 10 }, { level: 9, amount: 8 },
+        { level: 4, amount: 20 }, { level: 5, amount: 15 }, { level: 6, amount: 12.5 },
+        { level: 7, amount: 10 }, { level: 8, amount: 7.5 }, { level: 9, amount: 5 },
+        { level: 10, amount: 2.5 }
+      ]
+    },
+    {
+      rank: 'Garnet',
+      topUpAmount: 500,
+      levels: [
+        { level: 1, amount: 100 }, { level: 2, amount: 80 }, { level: 3, amount: 60 },
+        { level: 4, amount: 40 }, { level: 5, amount: 30 }, { level: 6, amount: 25 },
+        { level: 7, amount: 20 }, { level: 8, amount: 15 }, { level: 9, amount: 10 },
         { level: 10, amount: 5 }
+      ]
+    },
+    {
+      rank: 'Hematite',
+      topUpAmount: 1000,
+      levels: [
+        { level: 1, amount: 200 }, { level: 2, amount: 160 }, { level: 3, amount: 120 },
+        { level: 4, amount: 80 }, { level: 5, amount: 60 }, { level: 6, amount: 50 },
+        { level: 7, amount: 40 }, { level: 8, amount: 30 }, { level: 9, amount: 20 },
+        { level: 10, amount: 10 }
+      ]
+    },
+    {
+      rank: 'Iolite',
+      topUpAmount: 2500,
+      levels: [
+        { level: 1, amount: 500 }, { level: 2, amount: 400 }, { level: 3, amount: 300 },
+        { level: 4, amount: 200 }, { level: 5, amount: 150 }, { level: 6, amount: 125 },
+        { level: 7, amount: 100 }, { level: 8, amount: 75 }, { level: 9, amount: 50 },
+        { level: 10, amount: 25 }
+      ]
+    },
+    {
+      rank: 'Jeremejevite',
+      topUpAmount: 5000,
+      levels: [
+        { level: 1, amount: 1000 }, { level: 2, amount: 800 }, { level: 3, amount: 600 },
+        { level: 4, amount: 400 }, { level: 5, amount: 300 }, { level: 6, amount: 250 },
+        { level: 7, amount: 200 }, { level: 8, amount: 150 }, { level: 9, amount: 100 },
+        { level: 10, amount: 50 }
       ]
     }
   ];
@@ -199,13 +247,26 @@ const GlobalIncomePage: React.FC = () => {
   }, [userData?.uid]);
 
   // Get current rank data
-  const getCurrentRankData = () => {
-    return rankDefinitions.find(r => r.rank === userDetails?.rank) || rankDefinitions[0];
+  const getCurrentRankData = (): RankData => {
+    const rankMap: { [key: string]: string } = {
+      'azurite': 'Azurite',
+      'benitoite': 'Benitoite', 
+      'citrine': 'Citrine',
+      'danburite': 'Danburite',
+      'emerald': 'Emerald',
+      'fluorite': 'Fluorite',
+      'garnet': 'Garnet',
+      'hematite': 'Hematite',
+      'iolite': 'Iolite',
+      'jeremejevite': 'Jeremejevite'
+    };
+    
+    const userRankName = rankMap[userDetails?.rank?.toLowerCase() || 'azurite'] || 'Azurite';
+    return rankDefinitions.find(r => r.rank === userRankName) || rankDefinitions[0];
   };
 
   // Get required direct referrals for current rank
   const getRequiredDirectReferrals = () => {
-    const currentRank = getCurrentRankData();
     // All ranks require 2 direct referrals as per the original specification
     return 2;
   };
@@ -223,10 +284,6 @@ const GlobalIncomePage: React.FC = () => {
     pendingTransactions: transactions.filter(t => t.status === 'pending').length,
     withdrawnTransactions: 0 // This would come from withdrawal records
   };
-
-  const totalEarned = summaryStats.totalEarned;
-  const pendingIncome = summaryStats.pendingAmount;
-  const withdrawnIncome = summaryStats.withdrawnAmount;
 
   // Level-wise breakdown
   const levelBreakdown = Array.from({ length: 10 }, (_, i) => {
@@ -253,9 +310,9 @@ const GlobalIncomePage: React.FC = () => {
   };
 
   // Format date
-  const formatDate = (timestamp: any) => {
+  const formatDate = (timestamp: Date | { toDate(): Date } | null) => {
     if (!timestamp) return 'N/A';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const date = timestamp instanceof Date ? timestamp : timestamp.toDate();
     return new Intl.DateTimeFormat('en-IN', {
       year: 'numeric',
       month: 'short',
@@ -263,27 +320,6 @@ const GlobalIncomePage: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
-  };
-
-  // Toggle level expansion
-  const toggleLevel = (level: number) => {
-    const newExpanded = new Set(expandedLevels);
-    if (newExpanded.has(level)) {
-      newExpanded.delete(level);
-    } else {
-      newExpanded.add(level);
-    }
-    setExpandedLevels(newExpanded);
-  };
-
-  // Copy to clipboard
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      // You could add a toast notification here
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
   };
 
   // Handle rank activation
@@ -749,7 +785,7 @@ const GlobalIncomePage: React.FC = () => {
             <h5 className="text-indigo-800 font-medium mb-3">Rank Requirements</h5>
             <ul className="text-sm text-gray-700 space-y-2">
               <li className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${userDetails?.directReferrals >= 2 ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                <span className={`w-2 h-2 rounded-full ${(userDetails?.directReferrals || 0) >= 2 ? 'bg-green-500' : 'bg-red-500'}`}></span>
                 2 Direct Referrals ({userDetails?.directReferrals || 0}/2)
               </li>
               <li className="flex items-center gap-2">

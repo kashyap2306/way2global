@@ -2,15 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   getAllTickets, 
-  getTicketsByStatus, 
-  getTicketsByPriority,
   updateTicketStatus,
   assignTicket,
   addTicketResponse
 } from '../services/firestoreService';
 import { 
   Search, 
-  Filter, 
   Clock, 
   CheckCircle, 
   X, 

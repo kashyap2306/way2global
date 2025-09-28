@@ -1,15 +1,13 @@
 import { 
   doc, 
-  setDoc, 
-  serverTimestamp, 
-  writeBatch,
-  collection,
-  query,
-  where,
+  collection, 
+  query, 
+  where, 
   getDocs,
-  Timestamp,
-  deleteDoc
+  serverTimestamp,
+  writeBatch
 } from 'firebase/firestore';
+
 import { db } from '../config/firebase';
 import type { User } from 'firebase/auth';
 
@@ -503,18 +501,8 @@ export const validateUserDocuments = async (uid: string): Promise<{
   
   try {
     for (const collectionName of requiredCollections) {
-      let docId = uid;
+      // Handle special document ID patterns - not used in query but kept for reference
       
-      // Handle special document ID patterns
-      if (collectionName === 'transactions') {
-        docId = `${uid}_init`;
-      } else if (collectionName === 'incomeTransactions') {
-        docId = `${uid}_init`;
-      } else if (collectionName === 'withdrawals') {
-        docId = `${uid}_initial`;
-      }
-      
-      const docRef = doc(db, collectionName, docId);
       const docSnap = await getDocs(query(collection(db, collectionName), where('uid', '==', uid)));
       
       if (docSnap.empty) {

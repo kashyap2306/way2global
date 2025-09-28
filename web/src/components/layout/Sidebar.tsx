@@ -14,7 +14,11 @@ import {
   LayoutDashboard,
   Settings,
   MessageSquare,
-  Headphones
+  Headphones,
+  Shield,
+  UserCog,
+  DollarSign,
+  Upload
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -32,7 +36,7 @@ interface MenuItem {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const { currentUser, userData } = useAuth();
+  const { userData } = useAuth();
 
   const menuItems: MenuItem[] = [
     {
@@ -89,6 +93,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: <MessageSquare className="h-5 w-5" />,
       route: '/support',
     },
+    // Admin Section
+    {
+      id: 'admin-dashboard',
+      label: 'Admin Dashboard',
+      icon: <Shield className="h-5 w-5" />,
+      route: '/admin',
+      adminOnly: true,
+    },
+    {
+      id: 'admin-users',
+      label: 'Users Management',
+      icon: <UserCog className="h-5 w-5" />,
+      route: '/admin/users',
+      adminOnly: true,
+    },
+    {
+      id: 'admin-withdrawals',
+      label: 'Withdrawals',
+      icon: <DollarSign className="h-5 w-5" />,
+      route: '/admin/withdrawals',
+      adminOnly: true,
+    },
+    {
+      id: 'admin-topups',
+      label: 'Topup Requests',
+      icon: <Upload className="h-5 w-5" />,
+      route: '/admin/topups',
+      adminOnly: true,
+    },
     {
       id: 'admin-tickets',
       label: 'Support Tickets',
@@ -97,17 +130,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       adminOnly: true,
     },
     {
-      id: 'admin-topup',
-      label: 'Manage Topups',
+      id: 'admin-settings',
+      label: 'Platform Settings',
       icon: <Settings className="h-5 w-5" />,
-      route: '/admin/topup-requests',
+      route: '/admin/settings',
       adminOnly: true,
     },
     {
-      id: 'admin-withdrawals',
-      label: 'Manage Withdrawals',
-      icon: <ArrowDownToLine className="h-5 w-5" />,
-      route: '/admin/withdrawals',
+      id: 'admin-topup-old',
+      label: 'Manage Topups (Old)',
+      icon: <Settings className="h-5 w-5" />,
+      route: '/admin/topup-requests',
       adminOnly: true,
     },
     {
@@ -144,7 +177,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-700/50">
-            <h2 className="text-xl font-semibold text-white">Way2Globe</h2>
+            <h2 className="text-xl font-semibold text-white">Way2Globel</h2>
             <button
               onClick={onClose}
               className="lg:hidden p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700/50"
@@ -192,7 +225,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Footer */}
           <div className="p-4 border-t border-slate-700/50">
             <div className="text-xs text-slate-400 text-center">
-              © 2024 Way2Globe
+              © 2024 Way2Globel
             </div>
           </div>
         </div>

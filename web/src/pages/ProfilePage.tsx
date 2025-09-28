@@ -4,7 +4,7 @@ import { getMLMUser, type MLMUser } from '../services/firestoreService';
 import { updateProfile, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db, storage } from '../config/firebase';
+import { db, storage, auth } from '../config/firebase';
 import { Copy, Camera, Eye, EyeOff, User, Mail, Phone, Calendar, Award, Link, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -228,7 +228,7 @@ const ProfilePage: React.FC = () => {
     if (!currentUser?.email) return;
 
     try {
-      await sendPasswordResetEmail(currentUser.auth, currentUser.email);
+      await sendPasswordResetEmail(auth, currentUser.email);
       toast.success('Password reset email sent!');
     } catch (error) {
       console.error('Error sending password reset email:', error);

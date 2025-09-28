@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, User, Mail, Phone, Lock, Wallet, Users, CheckCircle, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import AnimatedCheck from '../components/AnimatedCheck';
 
 interface SignupFormData {
-  displayName: string;
+  fullName: string;
   email: string;
   phone: string;
   password: string;
@@ -14,26 +17,80 @@ interface SignupFormData {
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState<SignupFormData>({
-    displayName: '',
+    fullName: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
     walletAddress: '',
-    sponsorId: ''
+    sponsorId: searchParams.get('ref') || searchParams.get('referral') || ''
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: '', color: '' });
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [signupUserId, setSignupUserId] = useState<string>('');
+
+  // Auto-fill sponsor ID from URL parameters
+  useEffect(() => {
+    const ref = searchParams.get('ref') || searchParams.get('referral');
+    if (ref) {
+      setFormData(prev => ({ ...prev, sponsorId: ref }));
+    }
+  }, [searchParams]);
+
+  const checkPasswordStrength = (password: string) => {
+    let score = 0;
+    let text = '';
+    let color = '';
+
+    if (password.length >= 8) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+
+    switch (score) {
+      case 0:
+      case 1:
+        text = 'Very Weak';
+        color = 'text-red-500';
+        break;
+      case 2:
+        text = 'Weak';
+        color = 'text-orange-500';
+        break;
+      case 3:
+        text = 'Fair';
+        color = 'text-yellow-500';
+        break;
+      case 4:
+        text = 'Good';
+        color = 'text-blue-500';
+        break;
+      case 5:
+        text = 'Strong';
+        color = 'text-green-500';
+        break;
+    }
+
+    setPasswordStrength({ score, text, color });
+  };
 
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
-    // Name validation
-    if (!formData.displayName.trim()) {
-      newErrors.displayName = 'Full name is required';
-    } else if (formData.displayName.trim().length < 2) {
-      newErrors.displayName = 'Name must be at least 2 characters';
+    // Full Name validation
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
+    } else if (formData.fullName.trim().length < 2) {
+      newErrors.fullName = 'Name must be at least 2 characters';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.fullName.trim())) {
+      newErrors.fullName = 'Name can only contain letters and spaces';
     }
 
     // Email validation (Gmail only)
@@ -48,8 +105,8 @@ const Signup: React.FC = () => {
     // Phone validation
     if (!formData.phone) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\+?[\d\s\-\(\)]{10,}$/.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid phone number';
+    } else if (!/^\+?[1-9]\d{1,14}$/.test(formData.phone)) {
+      newErrors.phone = 'Please enter a valid phone number (format: +1234567890)';
     }
 
     // Password validation
@@ -60,15 +117,17 @@ const Signup: React.FC = () => {
     }
 
     // Confirm password validation
-    if (formData.password !== formData.confirmPassword) {
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
     // Wallet address validation
     if (!formData.walletAddress) {
-      newErrors.walletAddress = 'Wallet address is required';
+      newErrors.walletAddress = 'USDT BEP20 wallet address is required';
     } else if (!/^0x[a-fA-F0-9]{40}$/.test(formData.walletAddress)) {
-      newErrors.walletAddress = 'Please enter a valid BEP20 wallet address';
+      newErrors.walletAddress = 'Please enter a valid BEP20 wallet address (0x...)';
     }
 
     setErrors(newErrors);
@@ -79,6 +138,7 @@ const Signup: React.FC = () => {
     e.preventDefault();
     
     if (!validateForm()) {
+      toast.error('Please fix the errors in the form');
       return;
     }
 
@@ -92,46 +152,68 @@ const Signup: React.FC = () => {
       const result = await signupFunction({
         email: formData.email,
         password: formData.password,
-        displayName: formData.displayName,
+        displayName: formData.fullName,
         phone: formData.phone,
         walletAddress: formData.walletAddress,
         sponsorId: formData.sponsorId || undefined
       });
 
-      console.log('Signup successful:', result.data);
+      const data = result.data as any;
       
-      // The cloud function creates the user and returns a custom token
-      // We need to sign in with the custom token to set the auth state
-      const { customToken } = result.data as any;
-      if (customToken) {
-        const { signInWithCustomToken } = await import('firebase/auth');
-        const { auth } = await import('../config/firebase');
-        await signInWithCustomToken(auth, customToken);
+      if (data.success) {
+        // Store the user ID for navigation
+        setSignupUserId(data.uid);
+        
+        // Show success animation
+        setShowSuccess(true);
+        
+        toast.success('Account created successfully! Welcome to Way2Globel!');
+      } else {
+        throw new Error(data.message || 'Signup failed');
       }
-      
-      // Redirect to dashboard after successful signup
-      navigate('/dashboard');
       
     } catch (error: any) {
       console.error('Signup error:', error);
       
       let errorMessage = 'Failed to create account. Please try again.';
       
-      if (error.code === 'functions/already-exists') {
-        errorMessage = error.message || 'An account with this information already exists.';
-      } else if (error.code === 'functions/invalid-argument') {
-        errorMessage = error.message || 'Please check your input and try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
       setErrors({ general: errorMessage });
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleAnimationComplete = () => {
+    // Navigate to user details page after animation completes
+    navigate(`/user-details/${signupUserId}`);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Special handling for phone number (numeric only)
+    if (name === 'phone') {
+      const numericValue = value.replace(/[^\d\+\-\(\)\s]/g, '');
+      setFormData(prev => ({ ...prev, [name]: numericValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    
+    // Check password strength
+    if (name === 'password') {
+      checkPasswordStrength(value);
+    }
     
     // Clear error when user starts typing
     if (errors[name]) {
@@ -143,242 +225,265 @@ const Signup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 flex items-center justify-center py-4 sm:py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <>
+      {showSuccess && (
+        <AnimatedCheck 
+          onComplete={handleAnimationComplete}
+          duration={2000}
+        />
+      )}
+      
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-60 h-60 sm:w-80 sm:h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-60 h-60 sm:w-80 sm:h-80 bg-gradient-to-tr from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-r from-indigo-400/10 to-purple-400/10 rounded-full blur-3xl"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="max-w-md w-full space-y-6 sm:space-y-8 relative z-10">
+      <div className="relative w-full max-w-md mx-auto">
         {/* Header */}
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-purple-500/25 transform hover:scale-105 transition-transform duration-300">
-            <svg className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-            </svg>
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl mb-4 shadow-lg">
+            <User className="w-8 h-8 text-white" />
           </div>
-          <h2 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent mb-2 sm:mb-3">
-            Join Way2Globe Wave
+          <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
+            Join Way2Globel
           </h2>
-          <p className="text-sm sm:text-base text-gray-600 font-medium px-2">
-            Create your MLM account and start your journey to success
+          <p className="text-slate-300 font-medium">
+            Create your account and start your MLM journey
           </p>
         </div>
 
-        {/* Form */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl shadow-purple-500/10 p-6 sm:p-8 border border-white/20">
+        {/* Form Card */}
+        <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl shadow-purple-500/20 p-6 border border-white/20">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* General Error */}
             {errors.general && (
-              <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl p-4 shadow-sm">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <div className="w-6 h-6 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center">
-                      <svg className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-red-700">{errors.general}</p>
-                  </div>
-                </div>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                <p className="text-red-400 text-sm">{errors.general}</p>
               </div>
             )}
 
             {/* Full Name */}
             <div className="space-y-2">
-              <label htmlFor="displayName" className="block text-sm font-semibold text-gray-700">
-                Full Name
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
+                Full Name *
               </label>
               <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  id="displayName"
-                  name="displayName"
                   type="text"
+                  name="fullName"
                   required
-                  className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/50 backdrop-blur-sm ${
-                    errors.displayName ? 'border-red-300 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-purple-300'
-                  }`}
+                  className={`w-full pl-10 pr-4 py-3 bg-white/5 border ${
+                    errors.fullName ? 'border-red-500/50' : 'border-white/20'
+                  } rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300`}
                   placeholder="Enter your full name"
-                  value={formData.displayName}
+                  value={formData.fullName}
                   onChange={handleInputChange}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
               </div>
-              {errors.displayName && <p className="text-sm text-red-600 font-medium">{errors.displayName}</p>}
+              {errors.fullName && <p className="text-red-400 text-sm flex items-center space-x-1">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.fullName}</span>
+              </p>}
             </div>
 
             {/* Email */}
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
-                Email Address
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
+                Email / Gmail *
               </label>
               <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  id="email"
-                  name="email"
                   type="email"
+                  name="email"
                   required
-                  className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/50 backdrop-blur-sm ${
-                    errors.email ? 'border-red-300 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-purple-300'
-                  }`}
+                  className={`w-full pl-10 pr-4 py-3 bg-white/5 border ${
+                    errors.email ? 'border-red-500/50' : 'border-white/20'
+                  } rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300`}
                   placeholder="your.email@gmail.com"
                   value={formData.email}
                   onChange={handleInputChange}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                  </svg>
-                </div>
               </div>
-              {errors.email && <p className="text-sm text-red-600 font-medium">{errors.email}</p>}
+              {errors.email && <p className="text-red-400 text-sm flex items-center space-x-1">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.email}</span>
+              </p>}
             </div>
 
-            {/* Phone */}
+            {/* Phone Number */}
             <div className="space-y-2">
-              <label htmlFor="phone" className="block text-sm font-semibold text-gray-700">
-                Phone Number
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
+                Phone Number *
               </label>
               <div className="relative">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  id="phone"
-                  name="phone"
                   type="tel"
+                  name="phone"
                   required
-                  className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/50 backdrop-blur-sm ${
-                    errors.phone ? 'border-red-300 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-purple-300'
-                  }`}
+                  className={`w-full pl-10 pr-4 py-3 bg-white/5 border ${
+                    errors.phone ? 'border-red-500/50' : 'border-white/20'
+                  } rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300`}
                   placeholder="+1234567890"
                   value={formData.phone}
                   onChange={handleInputChange}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                </div>
               </div>
-              {errors.phone && <p className="text-sm text-red-600 font-medium">{errors.phone}</p>}
+              {errors.phone && <p className="text-red-400 text-sm flex items-center space-x-1">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.phone}</span>
+              </p>}
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
-                Password
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
+                Password *
               </label>
               <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  id="password"
+                  type={showPassword ? 'text' : 'password'}
                   name="password"
-                  type="password"
                   required
-                  className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/50 backdrop-blur-sm ${
-                    errors.password ? 'border-red-300 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-purple-300'
-                  }`}
-                  placeholder="Enter your password"
+                  className={`w-full pl-10 pr-12 py-3 bg-white/5 border ${
+                    errors.password ? 'border-red-500/50' : 'border-white/20'
+                  } rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300`}
+                  placeholder="Create a strong password"
                   value={formData.password}
                   onChange={handleInputChange}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
-              {errors.password && <p className="text-sm text-red-600 font-medium">{errors.password}</p>}
+              {formData.password && (
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1 bg-slate-700 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        passwordStrength.score <= 1 ? 'bg-red-500' :
+                        passwordStrength.score <= 2 ? 'bg-orange-500' :
+                        passwordStrength.score <= 3 ? 'bg-yellow-500' :
+                        passwordStrength.score <= 4 ? 'bg-blue-500' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
+                    ></div>
+                  </div>
+                  <span className={`text-xs font-medium ${passwordStrength.color}`}>
+                    {passwordStrength.text}
+                  </span>
+                </div>
+              )}
+              {errors.password && <p className="text-red-400 text-sm flex items-center space-x-1">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.password}</span>
+              </p>}
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700">
-                Confirm Password
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
+                Confirm Password *
               </label>
               <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
-                  type="password"
                   required
-                  className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/50 backdrop-blur-sm ${
-                    errors.confirmPassword ? 'border-red-300 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-purple-300'
-                  }`}
+                  className={`w-full pl-10 pr-12 py-3 bg-white/5 border ${
+                    errors.confirmPassword ? 'border-red-500/50' : 'border-white/20'
+                  } rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300`}
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
-              {errors.confirmPassword && <p className="text-sm text-red-600 font-medium">{errors.confirmPassword}</p>}
+              {formData.confirmPassword && formData.password === formData.confirmPassword && (
+                <p className="text-green-400 text-sm flex items-center space-x-1">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Passwords match</span>
+                </p>
+              )}
+              {errors.confirmPassword && <p className="text-red-400 text-sm flex items-center space-x-1">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.confirmPassword}</span>
+              </p>}
             </div>
 
-            {/* Wallet Address */}
+            {/* USDT BEP20 Wallet Address */}
             <div className="space-y-2">
-              <label htmlFor="walletAddress" className="block text-sm font-semibold text-gray-700">
-                USDT BEP20 Wallet Address
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
+                USDT BEP20 Wallet Address *
               </label>
               <div className="relative">
+                <Wallet className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  id="walletAddress"
-                  name="walletAddress"
                   type="text"
+                  name="walletAddress"
                   required
-                  className={`w-full px-4 py-3 border-2 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/50 backdrop-blur-sm font-mono text-sm ${
-                    errors.walletAddress ? 'border-red-300 bg-red-50/50 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-purple-300'
-                  }`}
-                  placeholder="0x..."
+                  className={`w-full pl-10 pr-4 py-3 bg-white/5 border ${
+                    errors.walletAddress ? 'border-red-500/50' : 'border-white/20'
+                  } rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300 font-mono text-sm`}
+                  placeholder="0x1234567890abcdef..."
                   value={formData.walletAddress}
                   onChange={handleInputChange}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
               </div>
-              {errors.walletAddress && <p className="text-sm text-red-600 font-medium">{errors.walletAddress}</p>}
+              {errors.walletAddress && <p className="text-red-400 text-sm flex items-center space-x-1">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.walletAddress}</span>
+              </p>}
             </div>
 
-            {/* Sponsor ID */}
+            {/* Sponsor ID (Optional) */}
             <div className="space-y-2">
-              <label htmlFor="sponsorId" className="block text-sm font-semibold text-gray-700">
-                Sponsor ID <span className="text-purple-400 font-normal">(Optional)</span>
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
+                Sponsor ID <span className="text-slate-500">(Optional)</span>
               </label>
               <div className="relative">
+                <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
-                  id="sponsorId"
-                  name="sponsorId"
                   type="text"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white/50 backdrop-blur-sm hover:border-purple-300"
-                  placeholder="Enter sponsor ID if you have one"
+                  name="sponsorId"
+                  className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300"
+                  placeholder="Enter sponsor's user code"
                   value={formData.sponsorId}
                   onChange={handleInputChange}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
               </div>
+              {formData.sponsorId && (
+                <p className="text-blue-400 text-sm flex items-center space-x-1">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Sponsor ID: {formData.sponsorId}</span>
+                </p>
+              )}
             </div>
 
             {/* Submit Button */}
-            <div className="pt-2">
+            <div className="pt-4">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-4 px-6 border border-transparent rounded-xl shadow-lg text-base font-semibold text-white bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 focus:outline-none focus:ring-4 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl hover:shadow-purple-500/25"
+                className="w-full flex justify-center items-center py-4 px-6 border border-transparent rounded-xl shadow-lg text-base font-semibold text-white bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02]"
               >
                 {loading ? (
                   <div className="flex items-center">
@@ -388,27 +493,43 @@ const Signup: React.FC = () => {
                 ) : (
                   <div className="flex items-center">
                     <span>Create Account</span>
-                    <svg className="ml-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
+                    <CheckCircle className="ml-2 w-5 h-5" />
                   </div>
                 )}
               </button>
             </div>
 
             {/* Login Link */}
-            <div className="text-center pt-4">
-              <p className="text-sm text-gray-600">
+            <div className="text-center pt-4 border-t border-white/10">
+              <p className="text-sm text-slate-400">
                 Already have an account?{' '}
-                <Link to="/login" className="font-semibold text-transparent bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text hover:from-violet-700 hover:to-purple-700 transition-all duration-300">
+                <Link 
+                  to="/login" 
+                  className="font-semibold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text hover:from-purple-300 hover:to-pink-300 transition-all duration-300"
+                >
                   Sign in here
                 </Link>
               </p>
             </div>
           </form>
         </div>
+
+        {/* Footer */}
+        <div className="text-center mt-8">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            By creating an account, you agree to our{' '}
+            <a href="#" className="text-purple-400 hover:text-purple-300 font-medium transition-colors duration-200">
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a href="#" className="text-purple-400 hover:text-purple-300 font-medium transition-colors duration-200">
+              Privacy Policy
+            </a>
+          </p>
+        </div>
       </div>
     </div>
+    </>
   );
 };
 

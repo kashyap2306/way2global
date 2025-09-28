@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   dashboardService, 
-  formatDashboardValue, 
   getDashboardCardColor 
 } from '../../services/dashboardService';
 import type { DashboardData } from '../../services/dashboardService';
@@ -24,7 +23,6 @@ const DashboardCards: React.FC = () => {
     globalIncome: 0,
     reGlobalIncome: 0,
     levelIncome: 0,
-    reLevelIncome: 0,
     directReferralCount: 0,
     totalTeamCount: 0,
     walletBalance: 0,
@@ -93,18 +91,11 @@ const DashboardCards: React.FC = () => {
       color: getDashboardCardColor(7)
     },
     {
-      title: 'Re-Level Income',
-      value: dashboardData.reLevelIncome,
-      key: 'reLevelIncome',
-      icon: '📈',
-      color: getDashboardCardColor(8)
-    },
-    {
       title: 'Total Withdrawals',
       value: dashboardData.totalWithdrawals,
       key: 'totalWithdrawals',
       icon: '💸',
-      color: getDashboardCardColor(9)
+      color: getDashboardCardColor(8)
     }
   ];
 
@@ -237,7 +228,7 @@ const DashboardCards: React.FC = () => {
       ))}
 
       {/* Custom CSS for animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeInUp {
           from {
             opacity: 0;

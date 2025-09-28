@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { ClipboardDocumentIcon as CopyIcon, CheckIcon, UserGroupIcon, CurrencyRupeeIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../utils/formatters';
+import { 
+  ClipboardDocumentIcon as CopyIcon, 
+  CheckIcon, 
+  UserGroupIcon, 
+  ChartBarIcon, 
+  CurrencyDollarIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CalendarIcon,
+  UserIcon
+} from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 interface UserData {
   uid: string;
@@ -19,6 +31,7 @@ interface UserData {
   phone?: string;
   referrals?: string[];
   createdAt: any;
+  sponsorId?: string;
 }
 
 interface TeamMember {
@@ -34,29 +47,60 @@ interface TeamMember {
   totalEarnings: number;
   sponsorId?: string;
   createdAt: any;
+  children?: TeamMember[];
+  level?: number;
+}
+
+interface TeamStats {
+  totalReferrals: number;
+  activeMembers: number;
+  totalTeamSize: number;
+  referralIncome: number;
+  levelIncome: number;
+  totalIncome: number;
 }
 
 const ReferralsPage: React.FC = () => {
   const { currentUser } = useAuth();
-  const [userData, setUserData] = useState<UserData | null>(null);
   const [directReferrals, setDirectReferrals] = useState<TeamMember[]>([]);
+  const [teamHierarchy, setTeamHierarchy] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [referralLink, setReferralLink] = useState('');
   const [copied, setCopied] = useState(false);
-  const [teamStats, setTeamStats] = useState({
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [teamStats, setTeamStats] = useState<TeamStats>({
     totalReferrals: 0,
     activeMembers: 0,
-    teamIncome: 0,
-    referralIncome: 0
+    totalTeamSize: 0,
+    referralIncome: 0,
+    levelIncome: 0,
+    totalIncome: 0
   });
 
   useEffect(() => {
     if (currentUser) {
+      fetchUserData();
       setupRealTimeListeners();
     }
   }, [currentUser]);
 
-  // Setup real-time listeners for live data updates
+  const fetchUserData = async () => {
+    try {
+      const userDocRef = doc(db, 'users', currentUser?.uid || '');
+      const userSnap = await getDoc(userDocRef);
+
+      if (userSnap.exists()) {
+        const data = userSnap.data() as UserData;
+
+        const baseUrl = window.location.origin;
+        setReferralLink(`${baseUrl}/signup?ref=${data.userCode}`);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      toast.error('Failed to load user data');
+    }
+  };
+
   const setupRealTimeListeners = () => {
     if (!currentUser) return;
 
@@ -68,17 +112,9 @@ const ReferralsPage: React.FC = () => {
       (doc) => {
         if (doc.exists()) {
           const data = doc.data() as UserData;
-          setUserData(data);
           
-          // Set referral link using userCode
           const baseUrl = window.location.origin;
           setReferralLink(`${baseUrl}/signup?ref=${data.userCode}`);
-          
-          // Update team stats with user's team size
-          setTeamStats(prev => ({
-            ...prev,
-            activeMembers: data.teamSize || 0
-          }));
         }
         setLoading(false);
       },
@@ -89,16 +125,15 @@ const ReferralsPage: React.FC = () => {
     );
     unsubscribers.push(userUnsubscribe);
 
-    // Listen to direct referrals (users where sponsorId == currentUser.uid)
-    const directReferralsUnsubscribe = onSnapshot(
-      query(collection(db, 'users'), where('sponsorId', '==', currentUser.uid)),
+    // Listen to all users to build team hierarchy
+    const usersUnsubscribe = onSnapshot(
+      collection(db, 'users'),
       (snapshot) => {
-        const directReferralsData: TeamMember[] = [];
+        const allUsers: TeamMember[] = [];
         snapshot.forEach(doc => {
           const data = doc.data();
-          const memberUid = data.uid || doc.id;
-          directReferralsData.push({
-            uid: memberUid,
+          allUsers.push({
+            uid: doc.id,
             fullName: data.fullName || data.displayName || 'Unknown',
             displayName: data.displayName,
             email: data.email || '',
@@ -112,47 +147,56 @@ const ReferralsPage: React.FC = () => {
             createdAt: data.createdAt
           });
         });
-        setDirectReferrals(directReferralsData);
+
+        // Build team hierarchy
+        const directRefs = allUsers.filter(user => user.sponsorId === currentUser.uid);
+        const hierarchy = buildTeamHierarchy(allUsers, currentUser.uid, 1);
         
-        // Update team stats with direct referrals count
-        setTeamStats(prev => ({
-          ...prev,
-          totalReferrals: directReferralsData.length
-        }));
+        setDirectReferrals(directRefs);
+        setTeamHierarchy(hierarchy);
         
-        // Calculate team income from all team members
-        fetchAllTeamMembersAndCalculateIncome();
+        // Calculate team stats
+        calculateTeamStats(allUsers, currentUser.uid);
       },
       (error) => {
-        console.error('Error listening to direct referrals:', error);
+        console.error('Error listening to users:', error);
       }
     );
-    unsubscribers.push(directReferralsUnsubscribe);
+    unsubscribers.push(usersUnsubscribe);
 
-    // Listen to incomeTransactions for referral income
-    const referralIncomeUnsubscribe = onSnapshot(
+    // Listen to income transactions
+    const incomeUnsubscribe = onSnapshot(
       query(
-        collection(db, 'users', currentUser.uid, 'incomeTransactions'),
-        where('type', '==', 'referral_commission'),
-        where('status', '==', 'completed')
+        collection(db, 'incomeTransactions'),
+        where('userId', '==', currentUser.uid)
       ),
       (snapshot) => {
-        let totalReferralIncome = 0;
+        let referralIncome = 0;
+        let levelIncome = 0;
+        
         snapshot.forEach((doc) => {
           const data = doc.data();
-          totalReferralIncome += data.amount || 0;
+          const amount = data.amount || 0;
+          
+          if (data.type === 'referral') {
+            referralIncome += amount;
+          } else if (data.type === 'level') {
+            levelIncome += amount;
+          }
         });
         
         setTeamStats(prev => ({
           ...prev,
-          referralIncome: totalReferralIncome
+          referralIncome,
+          levelIncome,
+          totalIncome: referralIncome + levelIncome
         }));
       },
       (error) => {
-        console.error('Error listening to referral income:', error);
+        console.error('Error listening to income transactions:', error);
       }
     );
-    unsubscribers.push(referralIncomeUnsubscribe);
+    unsubscribers.push(incomeUnsubscribe);
 
     // Cleanup function
     return () => {
@@ -160,200 +204,345 @@ const ReferralsPage: React.FC = () => {
     };
   };
 
-  // Fetch all team members and calculate total income
-  const fetchAllTeamMembersAndCalculateIncome = async () => {
-    if (!currentUser) return;
-
-    try {
-      const usersRef = collection(db, 'users');
-      const snapshot = await getDocs(usersRef);
-      
-      let totalTeamIncome = 0;
-      
-      snapshot.forEach((doc) => {
-        const userData = doc.data();
-        if (userData.sponsorId === currentUser.uid) {
-          totalTeamIncome += userData.totalEarnings || 0;
-        }
-      });
-
-      setTeamStats(prev => ({
-        ...prev,
-        teamIncome: totalTeamIncome
-      }));
-    } catch (error) {
-      console.error('Error fetching team members:', error);
-    }
+  const buildTeamHierarchy = (allUsers: TeamMember[], parentId: string, level: number): TeamMember[] => {
+    const children = allUsers.filter(user => user.sponsorId === parentId);
+    
+    return children.map(child => ({
+      ...child,
+      level,
+      children: level < 10 ? buildTeamHierarchy(allUsers, child.uid, level + 1) : []
+    }));
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount).replace('$', '') + ' USDT';
+  const calculateTeamStats = (allUsers: TeamMember[], userId: string) => {
+    const getTeamMembers = (parentId: string, level: number = 1): TeamMember[] => {
+      if (level > 10) return []; // Limit to 10 levels
+      
+      const directChildren = allUsers.filter(user => user.sponsorId === parentId);
+      let allTeamMembers = [...directChildren];
+      
+      directChildren.forEach(child => {
+        allTeamMembers = [...allTeamMembers, ...getTeamMembers(child.uid, level + 1)];
+      });
+      
+      return allTeamMembers;
+    };
+
+    const directRefs = allUsers.filter(user => user.sponsorId === userId);
+    const allTeamMembers = getTeamMembers(userId);
+    const activeMembers = allTeamMembers.filter(member => member.isActive).length;
+
+    setTeamStats(prev => ({
+      ...prev,
+      totalReferrals: directRefs.length,
+      activeMembers,
+      totalTeamSize: allTeamMembers.length
+    }));
   };
 
   const copyReferralLink = async () => {
-    if (referralLink) {
-      try {
-        await navigator.clipboard.writeText(referralLink);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Failed to copy: ', err);
-      }
+    if (!referralLink) return;
+    
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      toast.success('Referral link copied to clipboard!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      toast.error('Failed to copy referral link');
     }
+  };
+
+  const toggleNode = (nodeId: string) => {
+    const newExpanded = new Set(expandedNodes);
+    if (newExpanded.has(nodeId)) {
+      newExpanded.delete(nodeId);
+    } else {
+      newExpanded.add(nodeId);
+    }
+    setExpandedNodes(newExpanded);
+  };
+
+  const renderTeamMember = (member: TeamMember, depth: number = 0) => {
+    const hasChildren = member.children && member.children.length > 0;
+    const isExpanded = expandedNodes.has(member.uid);
+    const indentClass = `ml-${Math.min(depth * 4, 16)}`;
+
+    return (
+      <div key={member.uid} className="border-b border-slate-700/30 last:border-b-0">
+        <div className={`flex items-center p-4 hover:bg-slate-800/30 transition-colors ${indentClass}`}>
+          {hasChildren && (
+            <button
+              onClick={() => toggleNode(member.uid)}
+              className="mr-2 p-1 hover:bg-slate-700 rounded transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronDownIcon className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronRightIcon className="w-4 h-4 text-slate-400" />
+              )}
+            </button>
+          )}
+          {!hasChildren && <div className="w-6 mr-2" />}
+          
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <UserIcon className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-medium text-sm">
+                  {member.fullName || member.displayName}
+                </p>
+                <p className="text-slate-400 text-xs">{member.userCode}</p>
+              </div>
+            </div>
+            
+            <div className="text-sm">
+              <p className="text-slate-300">{member.rank}</p>
+              <p className="text-slate-500 text-xs">Level {member.level || 1}</p>
+            </div>
+            
+            <div className="text-sm">
+              <p className="text-slate-300 flex items-center gap-1">
+                <CalendarIcon className="w-3 h-3" />
+                {member.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                member.isActive 
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                  : 'bg-red-500/20 text-red-400 border border-red-500/30'
+              }`}>
+                {member.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {hasChildren && isExpanded && (
+          <div className="bg-slate-900/30">
+            {member.children!.map(child => renderTeamMember(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="space-y-6 px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="animate-pulse h-32 bg-slate-700 rounded-xl"></div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 px-2 sm:px-4 py-4 sm:py-8">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-8">
-        {/* Header */}
-        <div className="text-center mb-4 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-4">
-            Referrals & Team
+    <div className="space-y-6 px-4">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 rounded-xl shadow-lg p-6 backdrop-blur-sm border border-slate-700/50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">
+            Referrals & Team Network
           </h1>
-          <p className="text-sm sm:text-lg text-slate-300">
-            Build your network and earn rewards
+          <p className="text-slate-300">
+            Build your network and track your team's growth
           </p>
         </div>
+      </div>
 
-        {/* Team Summary Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
-          <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 rounded-lg sm:rounded-xl shadow-lg p-3 sm:p-6 backdrop-blur-sm border border-slate-700/50 hover:shadow-2xl transition-all duration-300">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="p-2 bg-blue-500/20 rounded-lg flex-shrink-0">
-                <UserGroupIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-sm sm:text-lg font-semibold text-white mb-1 break-words">Direct Referrals</h3>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-400 break-words">
-                  {loading ? '...' : teamStats.totalReferrals}
-                </p>
-                <p className="text-xs sm:text-sm text-slate-400 break-words">Users you directly referred</p>
-              </div>
+      {/* Team Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Direct Referrals */}
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm font-medium">Direct Referrals</p>
+              <p className="text-2xl font-bold">{teamStats.totalReferrals}</p>
             </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-green-900 rounded-lg sm:rounded-xl shadow-lg p-3 sm:p-6 backdrop-blur-sm border border-slate-700/50 hover:shadow-2xl transition-all duration-300">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-lg flex-shrink-0">
-                <ChartBarIcon className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-sm sm:text-lg font-semibold text-white mb-1 break-words">Total Team Size</h3>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-400 break-words">
-                  {loading ? '...' : teamStats.activeMembers}
-                </p>
-                <p className="text-xs sm:text-sm text-slate-400 break-words">All levels (direct + indirect)</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-purple-900 rounded-lg sm:rounded-xl shadow-lg p-3 sm:p-6 backdrop-blur-sm border border-slate-700/50 hover:shadow-2xl transition-all duration-300 sm:col-span-2 lg:col-span-1">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="p-2 bg-purple-500/20 rounded-lg flex-shrink-0">
-                <CurrencyRupeeIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-sm sm:text-lg font-semibold text-white mb-1 break-words">Referral Income</h3>
-                <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-400 break-words">
-                  {loading ? '...' : formatCurrency(teamStats.referralIncome)}
-                </p>
-                <p className="text-xs sm:text-sm text-slate-400 break-words">From referral commissions</p>
-              </div>
-            </div>
+            <UserGroupIcon className="w-8 h-8 text-blue-200" />
           </div>
         </div>
 
-        {/* Referral Link */}
-        <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-900 rounded-lg sm:rounded-xl shadow-lg p-3 sm:p-6 backdrop-blur-sm border border-slate-700/50">
-          <h3 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">Your Referral Link</h3>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-            <input
-              type="text"
-              value={referralLink || 'Loading...'}
-              readOnly
-              className="flex-1 bg-slate-900/50 border border-slate-600 rounded-lg px-3 py-2 text-white text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 break-all"
-            />
-            <button
-              onClick={copyReferralLink}
-              disabled={!referralLink}
-              className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-xs sm:text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {copied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Copy Link'}
-            </button>
+        {/* Total Team Size */}
+        <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Total Team Size</p>
+              <p className="text-2xl font-bold">{teamStats.totalTeamSize}</p>
+            </div>
+            <ChartBarIcon className="w-8 h-8 text-green-200" />
           </div>
         </div>
 
-        {/* Referrals Table */}
-        <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 rounded-lg sm:rounded-xl shadow-lg backdrop-blur-sm border border-slate-700/50 overflow-hidden">
-          <div className="p-3 sm:p-6 border-b border-slate-700/50">
-            <h2 className="text-lg sm:text-xl font-bold text-white">Your Team</h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">Direct referrals and their status</p>
+        {/* Active Members */}
+        <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm font-medium">Active Members</p>
+              <p className="text-2xl font-bold">{teamStats.activeMembers}</p>
+            </div>
+            <UserIcon className="w-8 h-8 text-purple-200" />
           </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-900/50">
+        </div>
+
+        {/* Referral Income */}
+        <div className="bg-gradient-to-br from-teal-600 to-teal-700 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-teal-100 text-sm font-medium">Referral Income</p>
+              <p className="text-2xl font-bold">{formatCurrency(teamStats.referralIncome)}</p>
+            </div>
+            <CurrencyDollarIcon className="w-8 h-8 text-teal-200" />
+          </div>
+        </div>
+
+        {/* Level Income */}
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-indigo-100 text-sm font-medium">Level Income</p>
+              <p className="text-2xl font-bold">{formatCurrency(teamStats.levelIncome)}</p>
+            </div>
+            <ChartBarIcon className="w-8 h-8 text-indigo-200" />
+          </div>
+        </div>
+
+        {/* Total Income */}
+        <div className="bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-orange-100 text-sm font-medium">Total Income</p>
+              <p className="text-2xl font-bold">{formatCurrency(teamStats.totalIncome)}</p>
+            </div>
+            <CurrencyDollarIcon className="w-8 h-8 text-orange-200" />
+          </div>
+        </div>
+      </div>
+
+      {/* Referral Link */}
+      <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 rounded-xl shadow-lg p-6 backdrop-blur-sm border border-slate-700/50">
+        <h3 className="text-lg font-semibold text-white mb-4">Your Referral Link</h3>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            value={referralLink}
+            readOnly
+            className="flex-1 px-4 py-3 bg-slate-800/50 border border-slate-600/30 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          />
+          <button
+            onClick={copyReferralLink}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 text-sm whitespace-nowrap flex items-center gap-2"
+          >
+            {copied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+        </div>
+        <p className="text-slate-400 text-sm mt-3">
+          Share this link to invite new members and earn referral commissions
+        </p>
+      </div>
+
+      {/* Team Hierarchy */}
+      <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 rounded-xl shadow-lg backdrop-blur-sm border border-slate-700/50 overflow-hidden">
+        <div className="p-6 border-b border-slate-700/50">
+          <h2 className="text-xl font-bold text-white">Team Hierarchy</h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Expandable tree view of your entire network (up to 10 levels)
+          </p>
+        </div>
+        
+        <div className="max-h-96 overflow-y-auto">
+          {teamHierarchy.length === 0 ? (
+            <div className="text-center p-8 text-slate-400">
+              <UserGroupIcon className="w-12 h-12 mx-auto mb-4 text-slate-500" />
+              <p className="text-lg font-medium mb-2">No team members yet</p>
+              <p className="text-sm">Share your referral link to start building your network!</p>
+            </div>
+          ) : (
+            <div>
+              {teamHierarchy.map(member => renderTeamMember(member, 0))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Direct Referrals Table */}
+      <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 rounded-xl shadow-lg backdrop-blur-sm border border-slate-700/50 overflow-hidden">
+        <div className="p-6 border-b border-slate-700/50">
+          <h2 className="text-xl font-bold text-white">Direct Referrals</h2>
+          <p className="text-sm text-slate-400 mt-1">
+            Users you directly referred to the platform
+          </p>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-900/50">
+              <tr>
+                <th className="text-left p-4 text-sm font-semibold text-slate-300">Member</th>
+                <th className="text-left p-4 text-sm font-semibold text-slate-300">User Code</th>
+                <th className="text-left p-4 text-sm font-semibold text-slate-300">Rank</th>
+                <th className="text-left p-4 text-sm font-semibold text-slate-300">Join Date</th>
+                <th className="text-left p-4 text-sm font-semibold text-slate-300">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {directReferrals.length === 0 ? (
                 <tr>
-                  <th className="text-left p-2 sm:p-4 text-xs sm:text-sm font-semibold text-slate-300">Name</th>
-                  <th className="text-left p-2 sm:p-4 text-xs sm:text-sm font-semibold text-slate-300 hidden sm:table-cell">Email</th>
-                  <th className="text-left p-2 sm:p-4 text-xs sm:text-sm font-semibold text-slate-300">Rank</th>
-                  <th className="text-left p-2 sm:p-4 text-xs sm:text-sm font-semibold text-slate-300">Status</th>
+                  <td colSpan={5} className="text-center p-8 text-slate-400">
+                    <UserGroupIcon className="w-8 h-8 mx-auto mb-2 text-slate-500" />
+                    <p>No direct referrals yet. Share your referral link to get started!</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {directReferrals.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="text-center p-6 sm:p-8 text-slate-400">
-                      No referrals yet. Share your referral link to get started!
+              ) : (
+                directReferrals.map((referral) => (
+                  <tr key={referral.uid} className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                          <UserIcon className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-white font-medium text-sm">
+                            {referral.fullName || referral.displayName}
+                          </p>
+                          <p className="text-slate-400 text-xs">{referral.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-slate-300 text-sm font-mono">{referral.userCode}</p>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-slate-300 text-sm">{referral.rank}</p>
+                    </td>
+                    <td className="p-4">
+                      <p className="text-slate-300 text-sm">
+                        {referral.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                      </p>
+                    </td>
+                    <td className="p-4">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        referral.isActive 
+                          ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                          : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      }`}>
+                        {referral.isActive ? 'Active' : 'Inactive'}
+                      </span>
                     </td>
                   </tr>
-                ) : (
-                  directReferrals.map((referral) => (
-                    <tr key={referral.uid} className="border-t border-slate-700/30 hover:bg-slate-800/30 transition-colors">
-                      <td className="p-2 sm:p-4">
-                        <div className="text-xs sm:text-sm font-medium text-white break-words">
-                          {referral.displayName || referral.fullName || 'Unknown User'}
-                        </div>
-                      </td>
-                      <td className="p-2 sm:p-4 hidden sm:table-cell">
-                        <div className="text-xs sm:text-sm text-slate-300 break-words">
-                          {referral.email || 'No email'}
-                        </div>
-                      </td>
-                      <td className="p-2 sm:p-4">
-                        <div className="text-xs sm:text-sm text-slate-300">
-                          {referral.rank || 'Unranked'}
-                        </div>
-                      </td>
-                      <td className="p-2 sm:p-4">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          referral.isActive 
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                            : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                        }`}>
-                          {referral.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -13,7 +13,6 @@ import {
   X, 
   AlertCircle,
   Calendar,
-  User,
   Send
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -373,12 +372,12 @@ const MyTicketsPage: React.FC = () => {
         {/* Create Ticket Modal */}
         {isCreateModalOpen && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
-                <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">Create Support Ticket</h2>
+              <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-blue-900 rounded-2xl shadow-xl w-full max-w-2xl backdrop-blur-sm border border-slate-700/50">
+                <div className="flex justify-between items-center p-6 border-b border-slate-700/50">
+                  <h2 className="text-xl font-semibold text-white">Create Support Ticket</h2>
                   <button
                     onClick={() => setIsCreateModalOpen(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-slate-400 hover:text-white"
                   >
                     <X className="h-6 w-6" />
                   </button>
@@ -387,26 +386,26 @@ const MyTicketsPage: React.FC = () => {
                 <div className="p-6">
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
                         Subject *
                       </label>
                       <input
                         type="text"
                         value={newTicket.subject}
                         onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-slate-400"
                         placeholder="Brief description of your issue"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
                         Priority
                       </label>
                       <select
                         value={newTicket.priority}
                         onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value as 'normal' | 'high' | 'urgent' })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                       >
                         <option value="low">Low</option>
                          <option value="normal">Normal</option>
@@ -416,13 +415,13 @@ const MyTicketsPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
                         Description *
                       </label>
                       <textarea
                         value={newTicket.description}
                         onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-white placeholder-slate-400"
                         rows={6}
                         placeholder="Please provide detailed information about your issue..."
                       />
@@ -449,7 +448,7 @@ const MyTicketsPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setIsCreateModalOpen(false)}
-                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-xl font-medium transition-colors"
+                      className="flex-1 bg-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
                     >
                       Cancel
                     </button>
