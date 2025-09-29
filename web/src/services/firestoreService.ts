@@ -42,16 +42,19 @@ export interface MLMUser {
   balance: number;
   pendingBalance: number;
   totalEarnings: number;
+  totalWithdrawn: number;
+  availableBalance: number;
   cyclesCompleted: number;
   autoTopUpEnabled: boolean;
   nextRankTopUpAmount: number;
   minWithdrawEligibleAt: Timestamp | null;
   status: string;
+  isActive: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastLoginAt?: Timestamp;
   // Admin fields
-  role?: 'user' | 'admin' | 'superadmin' | 'moderator';
+  role: 'user' | 'admin' | 'superadmin' | 'moderator';
   isAdmin?: boolean;
   // Global income fields
   globalIncomeEarned?: number;
@@ -232,11 +235,15 @@ export const createMLMUser = async (userData: Partial<MLMUser>): Promise<void> =
     balance: 0,
     pendingBalance: 0,
     totalEarnings: 0,
+    totalWithdrawn: 0,
+    availableBalance: 0,
     cyclesCompleted: 0,
     autoTopUpEnabled: true,
     nextRankTopUpAmount: 10,
     minWithdrawEligibleAt: null,
     status: 'active',
+    isActive: false,
+    role: userData.role || 'user', // Default role is 'user'
     referrals: [],
     createdAt: serverTimestamp() as Timestamp,
     updatedAt: serverTimestamp() as Timestamp,

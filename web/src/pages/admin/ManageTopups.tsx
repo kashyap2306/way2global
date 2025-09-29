@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, doc, updateDoc, increment, orderBy, where } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { db } from '../../config/firebase';
 import { CheckIcon, XMarkIcon, ClockIcon, EyeIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 
 interface TopupRequest {

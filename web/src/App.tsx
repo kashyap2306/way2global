@@ -13,16 +13,19 @@ import ReferralsPage from './pages/ReferralsPage';
 import TopupPage from './pages/TopupPage';
 import LevelIncomePage from './pages/LevelIncomePage';
 import GlobalIncomePage from './pages/GlobalIncomePage';
-import AdminTopUpRequests from './components/AdminTopUpRequests';
-import AdminWithdrawalPanel from './components/admin/AdminWithdrawalPanel';
 import MyTicketsPage from './pages/MyTicketsPage';
-import AdminTicketsPage from './pages/AdminTicketsPage';
 import AdminRoute from './components/AdminRoute';
+import AdminLayout from './pages/admin';
+import AdminLogin from './pages/admin/Login';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UsersManagement from './pages/admin/UsersManagement';
 import WithdrawalsManagement from './pages/admin/WithdrawalsManagement';
 import TopupsManagement from './pages/admin/TopupsManagement';
 import AdminSettings from './pages/admin/AdminSettings';
+import AuditLogs from './pages/admin/AuditLogs';
+import SupportTickets from './pages/admin/SupportTickets';
+import ManageTopups from './pages/admin/ManageTopups';
+import WithdrawalsOld from './pages/admin/WithdrawalsOld';
 
 import WalletPage from './pages/WalletPage';
 import WithdrawalPage from './pages/WithdrawalPage';
@@ -30,7 +33,23 @@ import ProfilePage from './pages/ProfilePage';
 import './App.css';
 
 const AppContent: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
+
+  // Role-based navigation logic
+  React.useEffect(() => {
+    if (currentUser && userData) {
+      const currentPath = window.location.pathname;
+      
+      // If user is admin and not on admin route, redirect to admin dashboard
+      if (userData.role === 'admin' && !currentPath.startsWith('/admin')) {
+        window.location.href = '/admin';
+      }
+      // If user is regular user and on admin route, redirect to dashboard
+      else if (userData.role === 'user' && currentPath.startsWith('/admin')) {
+        window.location.href = '/dashboard';
+      }
+    }
+  }, [currentUser, userData]);
 
   return (
     <Routes>
@@ -141,87 +160,28 @@ const AppContent: React.FC = () => {
         } 
       />
       
-      {/* Admin Routes */}
+      {/* Admin Login Route (unprotected) */}
+      <Route path="/admin/login" element={<AdminLogin />} />
+      
+      {/* Admin Routes (protected) */}
       <Route 
         path="/admin" 
         element={
           <AdminRoute>
-            <DashboardLayout>
-              <AdminDashboard />
-            </DashboardLayout>
+            <AdminLayout />
           </AdminRoute>
-        } 
-      />
-      <Route 
-        path="/admin/users" 
-        element={
-          <AdminRoute>
-            <DashboardLayout>
-              <UsersManagement />
-            </DashboardLayout>
-          </AdminRoute>
-        } 
-      />
-      <Route 
-        path="/admin/withdrawals" 
-        element={
-          <AdminRoute>
-            <DashboardLayout>
-              <WithdrawalsManagement />
-            </DashboardLayout>
-          </AdminRoute>
-        } 
-      />
-      <Route 
-        path="/admin/topups" 
-        element={
-          <AdminRoute>
-            <DashboardLayout>
-              <TopupsManagement />
-            </DashboardLayout>
-          </AdminRoute>
-        } 
-      />
-      <Route 
-        path="/admin/settings" 
-        element={
-          <AdminRoute>
-            <DashboardLayout>
-              <AdminSettings />
-            </DashboardLayout>
-          </AdminRoute>
-        } 
-      />
-      <Route 
-        path="/admin/tickets" 
-        element={
-          <AdminRoute>
-            <DashboardLayout>
-              <AdminTicketsPage />
-            </DashboardLayout>
-          </AdminRoute>
-        } 
-      />
-      <Route 
-        path="/admin/topup-requests" 
-        element={
-          <AdminRoute>
-            <DashboardLayout>
-              <AdminTopUpRequests />
-            </DashboardLayout>
-          </AdminRoute>
-        } 
-      />
-      <Route 
-        path="/admin/withdrawals-old" 
-        element={
-          <AdminRoute>
-            <DashboardLayout>
-              <AdminWithdrawalPanel />
-            </DashboardLayout>
-          </AdminRoute>
-        } 
-      />
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="users" element={<UsersManagement />} />
+        <Route path="withdrawals" element={<WithdrawalsManagement />} />
+        <Route path="topups" element={<TopupsManagement />} />
+        <Route path="support" element={<SupportTickets />} />
+        <Route path="audit" element={<AuditLogs />} />
+        <Route path="settings" element={<AdminSettings />} />
+        <Route path="manage-topups" element={<ManageTopups />} />
+        <Route path="withdrawals-old" element={<WithdrawalsOld />} />
+      </Route>
       
       {/* Root Route */}
       <Route 

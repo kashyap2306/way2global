@@ -8,6 +8,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../config/firebase';
 import { createAllUserDocuments, checkUserDocumentsExist } from '../services/userSignupService';
 
