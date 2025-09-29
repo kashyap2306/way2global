@@ -22,14 +22,16 @@ import UsersManagement from './pages/admin/UsersManagement';
 import WithdrawalsManagement from './pages/admin/WithdrawalsManagement';
 import TopupsManagement from './pages/admin/TopupsManagement';
 import AdminSettings from './pages/admin/AdminSettings';
+import PlatformSettings from './pages/admin/PlatformSettings';
 import AuditLogs from './pages/admin/AuditLogs';
 import SupportTickets from './pages/admin/SupportTickets';
-import ManageTopups from './pages/admin/ManageTopups';
-import WithdrawalsOld from './pages/admin/WithdrawalsOld';
+import GlobalIncomeManagement from './pages/admin/GlobalIncomeManagement';
 
 import WalletPage from './pages/WalletPage';
 import WithdrawalPage from './pages/WithdrawalPage';
 import ProfilePage from './pages/ProfilePage';
+import TestNewSystem from './pages/TestNewSystem';
+
 import './App.css';
 
 const AppContent: React.FC = () => {
@@ -148,6 +150,16 @@ const AppContent: React.FC = () => {
         } 
       />
       
+      {/* Test Routes */}
+      <Route 
+        path="/test-new-system" 
+        element={<TestNewSystem />} 
+      />
+      <Route 
+              path="/global-income-redesigned" 
+              element={<GlobalIncomePage />}
+            />
+      
       {/* Support Ticket Routes */}
       <Route 
         path="/support" 
@@ -176,11 +188,12 @@ const AppContent: React.FC = () => {
         <Route path="users" element={<UsersManagement />} />
         <Route path="withdrawals" element={<WithdrawalsManagement />} />
         <Route path="topups" element={<TopupsManagement />} />
+        <Route path="manage-topups" element={<TopupsManagement />} />
         <Route path="support" element={<SupportTickets />} />
         <Route path="audit" element={<AuditLogs />} />
-        <Route path="settings" element={<AdminSettings />} />
-        <Route path="manage-topups" element={<ManageTopups />} />
-        <Route path="withdrawals-old" element={<WithdrawalsOld />} />
+        <Route path="global-income" element={<GlobalIncomeManagement />} />
+        <Route path="settings" element={<PlatformSettings />} />
+        <Route path="settings-advanced" element={<AdminSettings />} />
       </Route>
       
       {/* Root Route */}

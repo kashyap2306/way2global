@@ -20,8 +20,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ExclamationCircleIcon,
-  FireIcon,
-  PaperAirplaneIcon as Send
+  FireIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { Timestamp } from 'firebase/firestore';
@@ -49,7 +48,7 @@ interface SupportTicket {
 }
 
 const AdminTicketsPage: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser: user } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [filteredTickets, setFilteredTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,11 +169,11 @@ const AdminTicketsPage: React.FC = () => {
   };
 
   const handleAssignTicket = async (ticketId: string) => {
-    if (!currentUser) return;
+    if (!user) return;
     
     try {
       setUpdating(true);
-      await assignTicket(ticketId, currentUser.uid);
+      await assignTicket(ticketId, user.uid);
       toast.success('Ticket assigned successfully');
       fetchTickets();
       
@@ -182,7 +181,7 @@ const AdminTicketsPage: React.FC = () => {
       if (selectedTicket && selectedTicket.id === ticketId) {
         setSelectedTicket({ 
           ...selectedTicket, 
-          assignedTo: currentUser.uid,
+          assignedTo: user.uid,
           status: 'in-progress'
         });
       }
@@ -195,13 +194,13 @@ const AdminTicketsPage: React.FC = () => {
   };
 
   const handleAddResponse = async () => {
-    if (!currentUser || !selectedTicket || !responseMessage.trim()) return;
+    if (!user || !selectedTicket || !responseMessage.trim()) return;
 
     try {
       setResponding(true);
       await addTicketResponse(
         selectedTicket.id!,
-        currentUser.uid,
+        user.uid,
         'admin',
         responseMessage
       );
@@ -224,20 +223,6 @@ const AdminTicketsPage: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <ClockIcon className="h-4 w-4 text-yellow-400" />;
-      case 'in-progress':
-        return <ExclamationCircleIcon className="h-4 w-4 text-blue-400" />;
-      case 'resolved':
-        return <CheckCircleIcon className="h-4 w-4 text-green-400" />;
-      case 'closed':
-        return <XMarkIcon className="h-4 w-4 text-gray-400" />;
-      default:
-        return <ClockIcon className="h-4 w-4 text-gray-400" />;
-    }
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {

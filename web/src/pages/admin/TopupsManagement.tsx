@@ -1028,7 +1028,7 @@ const TopupsManagement: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-400">Date:</span>
                   <span className="text-white font-medium">
-                    {new Date(selectedTopup.createdAt).toLocaleDateString()}
+                    {selectedTopup.createdAt?.toDate?.()?.toLocaleDateString()}
                   </span>
                 </div>
               </div>

@@ -123,11 +123,6 @@ export const createSettingsTemplate = (uid: string, userCode: string) => ({
   uid,
   userCode,
   userId: uid, // Backward compatibility
-  notifications: {
-    email: true,
-    sms: false,
-    push: true
-  },
   privacy: {
     profileVisible: true,
     showEarnings: false,

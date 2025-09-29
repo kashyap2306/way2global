@@ -15,7 +15,7 @@ import {
   EyeIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import { collection, query, orderBy, limit, getDocs, where, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import toast from 'react-hot-toast';
 
@@ -461,12 +461,12 @@ const AuditLogs: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(log.type)}`}>
-                        {log.type.replace('_', ' ').toUpperCase()}
+                        {log.type ? log.type.replace('_', ' ').toUpperCase() : 'UNKNOWN'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
-                        {log.status.toUpperCase()}
+                        {log.status?.toUpperCase() || 'UNKNOWN'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-300">

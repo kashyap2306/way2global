@@ -4,7 +4,6 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import DashboardCards from '../components/dashboard/DashboardCards';
 import { ClipboardDocumentIcon as CopyIcon, CheckIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { getUserGlobalPoolStatus } from '../services/globalIncomeService';
 
 interface UserData {
   uid: string;
@@ -45,8 +44,8 @@ const HomePage: React.FC = () => {
         setReferralLink(`${baseUrl}/signup?ref=${data.userCode}`);
 
         if (data.isActive) {
-          const poolStatus = await getUserGlobalPoolStatus(currentUser?.uid || '');
-          setGlobalPoolStatus(poolStatus);
+          // Global pool status functionality removed - using new direct pool generation system
+          setGlobalPoolStatus(null);
         }
       }
     } catch (error) {

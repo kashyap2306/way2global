@@ -8,7 +8,6 @@ import {
   MagnifyingGlassIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CalendarIcon,
   CurrencyDollarIcon,
   UserIcon,
   Squares2X2Icon,
@@ -1002,38 +1001,6 @@ const WithdrawalsManagement: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
-
-// Helper function to calculate fees
-const calculateFees = (amount: number) => {
-  const withdrawalFee = amount * 0.15; // 15%
-  const fundConvert = amount * 0.10; // 10%
-  const totalFee = withdrawalFee + fundConvert;
-  const finalAmount = amount - totalFee;
-  
-  return {
-    withdrawalFee,
-    fundConvert,
-    totalFee,
-    finalAmount
-  };
-};
-
-// Helper function to get status badge
-const getStatusBadge = (status: string) => {
-  const statusConfig = {
-    pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/30', label: 'Pending' },
-    approved: { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/30', label: 'Approved' },
-    rejected: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30', label: 'Rejected' }
-  };
-  
-  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-  
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}>
-      {config.label}
-    </span>
   );
 };
 

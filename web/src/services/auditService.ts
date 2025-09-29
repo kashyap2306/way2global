@@ -33,6 +33,7 @@ export interface AuditLog {
 export type AuditAction = 
   | 'user_suspended'
   | 'user_reactivated'
+  | 'user_updated'
   | 'withdrawal_approved'
   | 'withdrawal_rejected'
   | 'topup_approved'
@@ -358,6 +359,34 @@ class AuditService {
   }
 
   /**
+   * Log user profile update
+   */
+  async logUserUpdate(
+    adminId: string,
+    adminEmail: string,
+    userId: string,
+    updates: any,
+    userBefore: any
+  ): Promise<void> {
+    try {
+      await this.logAction(
+        adminId,
+        adminEmail,
+        'user_updated',
+        'user',
+        {
+          before: userBefore,
+          after: updates,
+          updatedFields: Object.keys(updates)
+        },
+        userId
+      );
+    } catch (error) {
+      console.error('Error logging user update:', error);
+    }
+  }
+
+  /**
    * Get client IP address (simplified version)
    */
   private async getClientIP(): Promise<string> {
@@ -377,6 +406,7 @@ class AuditService {
     const actionDescriptions: Record<AuditAction, string> = {
       user_suspended: 'suspended user',
       user_reactivated: 'reactivated user',
+      user_updated: 'updated user profile',
       withdrawal_approved: 'approved withdrawal',
       withdrawal_rejected: 'rejected withdrawal',
       topup_approved: 'approved topup',

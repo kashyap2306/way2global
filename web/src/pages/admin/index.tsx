@@ -14,7 +14,6 @@ import {
   Bars3Icon,
   XMarkIcon,
   UserCircleIcon,
-  BellIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 
@@ -64,6 +63,13 @@ const AdminLayout: React.FC = () => {
       href: '/admin/audit',
       icon: DocumentTextIcon,
       current: location.pathname === '/admin/audit',
+      badge: null
+    },
+    {
+      name: 'Global Income',
+      href: '/admin/global-income',
+      icon: ChartBarIcon,
+      current: location.pathname === '/admin/global-income',
       badge: null
     },
     {
@@ -295,14 +301,6 @@ const AdminLayout: React.FC = () => {
                   <MagnifyingGlassIcon className="h-5 w-5" />
                 </button>
                 
-                {/* Notifications */}
-                <button className="relative text-gray-300 hover:text-white p-2 rounded-lg hover:bg-white/10 transition-colors">
-                  <BellIcon className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                    3
-                  </span>
-                </button>
-
                 {/* User Info & Logout */}
                 <div className="flex items-center space-x-3">
                   <div className="hidden sm:block text-right">

@@ -17,8 +17,10 @@ import { auditService } from './auditService';
 
 export interface AdminUser {
   uid: string;
+  userCode?: string;
   displayName: string;
   email: string;
+  contact?: string;
   rank: string;
   status: string;
   balance: number;
@@ -451,6 +453,36 @@ class AdminService {
       );
     } catch (error) {
       console.error('Error rejecting topup:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user details
+   */
+  async updateUser(userId: string, updates: Partial<AdminUser>, adminId: string, adminEmail: string): Promise<void> {
+    try {
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const userBefore = userDoc.data();
+      
+      // Prepare update data (exclude uid from updates)
+      const { uid, ...updateData } = updates;
+      
+      await updateDoc(userRef, {
+        ...updateData,
+        updatedAt: Timestamp.now()
+      });
+
+      // Log the action
+      await auditService.logUserUpdate(adminId, adminEmail, userId, updateData, userBefore);
+    } catch (error) {
+      console.error('Error updating user:', error);
       throw error;
     }
   }

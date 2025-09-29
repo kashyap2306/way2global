@@ -3,7 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { CurrencyDollarIcon, ClipboardDocumentIcon, CheckIcon, ClockIcon, XMarkIcon, ArrowLeftIcon, ArrowRightIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { canActivateId, activateUserId } from '../services/globalIncomeService';
 
 interface TopupRequest {
   id: string;
@@ -52,9 +51,9 @@ const TopupPage: React.FC = () => {
     if (!currentUser || userData?.isActive) return;
     
     try {
-      const eligibility = await canActivateId(currentUser.uid);
-      setActivationData(eligibility);
-      setCanActivate(eligibility.canActivate);
+      // Old activation eligibility check removed - using new direct activation system
+      setActivationData(null);
+      setCanActivate(false);
     } catch (error) {
       console.error('Error checking activation eligibility:', error);
     }
@@ -140,7 +139,7 @@ const TopupPage: React.FC = () => {
     
     setActivationLoading(true);
     try {
-      await activateUserId(currentUser.uid);
+      // Old activation function removed - using new direct activation system
       setShowActivationModal(false);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
