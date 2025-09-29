@@ -20,6 +20,7 @@ export { seedDatabase } from './callable/seedDatabase';
 
 // Export Firestore triggers
 export { onUserCreated } from './triggers/onUserCreated';
+export { onActivationTxCreated } from './triggers/onActivationTxCreated';
 
 // Export scheduled functions
 export { scheduledGlobalCycle } from './triggers/scheduledGlobalCycle';

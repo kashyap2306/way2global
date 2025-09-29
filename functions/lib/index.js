@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.corsHandler = exports.healthCheck = exports.scheduledGlobalCycle = exports.onUserCreated = exports.seedDatabase = exports.claimPayout = exports.requestWithdrawal = exports.createActivation = exports.getUserData = exports.login = exports.signup = exports.userHandlers = exports.adminHandlers = exports.authHandlers = void 0;
+exports.corsHandler = exports.healthCheck = exports.scheduledGlobalCycle = exports.onActivationTxCreated = exports.onUserCreated = exports.seedDatabase = exports.claimPayout = exports.requestWithdrawal = exports.createActivation = exports.getUserData = exports.login = exports.signup = exports.userHandlers = exports.adminHandlers = exports.authHandlers = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
@@ -63,6 +63,8 @@ Object.defineProperty(exports, "seedDatabase", { enumerable: true, get: function
 // Export Firestore triggers
 var onUserCreated_1 = require("./triggers/onUserCreated");
 Object.defineProperty(exports, "onUserCreated", { enumerable: true, get: function () { return onUserCreated_1.onUserCreated; } });
+var onActivationTxCreated_1 = require("./triggers/onActivationTxCreated");
+Object.defineProperty(exports, "onActivationTxCreated", { enumerable: true, get: function () { return onActivationTxCreated_1.onActivationTxCreated; } });
 // Export scheduled functions
 var scheduledGlobalCycle_1 = require("./triggers/scheduledGlobalCycle");
 Object.defineProperty(exports, "scheduledGlobalCycle", { enumerable: true, get: function () { return scheduledGlobalCycle_1.scheduledGlobalCycle; } });

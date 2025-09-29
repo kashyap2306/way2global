@@ -10,6 +10,7 @@ export { requestWithdrawal } from './callable/requestWithdrawal';
 export { claimPayout } from './callable/claimPayout';
 export { seedDatabase } from './callable/seedDatabase';
 export { onUserCreated } from './triggers/onUserCreated';
+export { onActivationTxCreated } from './triggers/onActivationTxCreated';
 export { scheduledGlobalCycle } from './triggers/scheduledGlobalCycle';
 export declare const healthCheck: functions.HttpsFunction;
 export declare const corsHandler: functions.HttpsFunction;
