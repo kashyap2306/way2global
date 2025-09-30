@@ -62,7 +62,10 @@ const WalletPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   // Format currency to USDT
-  const formatUSDT = (amount: number): string => {
+  const formatUSDT = (amount: number | undefined | null): string => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return '0.00 USDT';
+    }
     return `${amount.toFixed(2)} USDT`;
   };
 

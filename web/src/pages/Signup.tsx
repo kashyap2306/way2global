@@ -18,7 +18,7 @@ interface SignupFormData {
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { signup, currentUser } = useAuth();
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState<SignupFormData>({
     fullName: '',
@@ -35,7 +35,6 @@ const Signup: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: '', color: '' });
   const [showSuccess, setShowSuccess] = useState(false);
-  const [signupUserId, setSignupUserId] = useState<string>('');
   const [referrerName, setReferrerName] = useState<string>('');
   const [loadingReferrer, setLoadingReferrer] = useState(false);
 
@@ -172,7 +171,7 @@ const Signup: React.FC = () => {
 
     try {
       // Use AuthContext signup function
-      const user = await signup(
+      await signup(
         formData.email,
         formData.password,
         formData.fullName,
@@ -181,13 +180,13 @@ const Signup: React.FC = () => {
         formData.sponsorId || undefined
       );
       
-      // Store the user ID for navigation
-      setSignupUserId(user.uid);
-      
       // Show success animation
       setShowSuccess(true);
       
       toast.success('Account created successfully! Welcome to Way2Globel!');
+
+      // Immediately redirect to dashboard
+      navigate('/dashboard');
       
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -197,14 +196,30 @@ const Signup: React.FC = () => {
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'An account with this email already exists';
       } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address';
+        errorMessage = 'Password should be at least 6 characters';
+      } else if (error.message.includes('auth/network-request-failed')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (error.message.includes('auth/invalid-email')) {
+        errorMessage = 'Invalid email address format.';
+      } else if (error.message.includes('auth/operation-not-allowed')) {
+        errorMessage = 'Email/password accounts are not enabled.';
+      } else if (error.message.includes('auth/too-many-requests')) {
+        errorMessage = 'Too many requests. Please try again later.';
+      } else if (error.message.includes('Failed to generate unique user code')) {
+        errorMessage = 'Failed to generate a unique user ID. Please try again.';
+      } else if (error.message.includes('Firestore security rules')) {
+        errorMessage = 'Database permission error. Please contact support.';
+      } else if (error.message.includes('Database quota exceeded')) {
+        errorMessage = 'Database quota exceeded. Please try again later.';
+      } else if (error.message.includes('Database temporarily unavailable')) {
+        errorMessage = 'Database temporarily unavailable. Please try again.';
+      } else if (error.message.includes('Missing or insufficient permissions')) {
+        errorMessage = 'Insufficient permissions. Please contact support.';
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      setErrors({ general: errorMessage });
+      setErrors({ firebase: errorMessage });
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -212,8 +227,7 @@ const Signup: React.FC = () => {
   };
 
   const handleAnimationComplete = () => {
-    // Navigate to user details page after animation completes
-    navigate(`/user-details/${signupUserId}`);
+    // No-op: navigation handled after signup success to control exact flow
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

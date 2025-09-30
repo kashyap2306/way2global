@@ -20,7 +20,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  return currentUser && userData ? <>{children}</> : <Navigate to="/login" replace />;
+  // Check if user is authenticated
+  if (!currentUser || !userData) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // User is authenticated and active - allow access to protected routes
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

@@ -184,7 +184,10 @@ const WithdrawalPage: React.FC = () => {
     }
   };
 
-  const formatUSDT = (amount: number) => {
+  const formatUSDT = (amount: number | undefined | null) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return '0.00 USDT';
+    }
     return `${amount.toFixed(2)} USDT`;
   };
 
@@ -371,7 +374,7 @@ const WithdrawalPage: React.FC = () => {
                       {formatUSDT(withdrawal.amountToSend)}
                     </td>
                     <td className="py-3 px-2 text-slate-300 font-mono text-xs">
-                      {withdrawal.address.slice(0, 6)}...{withdrawal.address.slice(-4)}
+                      {withdrawal.address ? `${withdrawal.address.slice(0, 6)}...${withdrawal.address.slice(-4)}` : 'N/A'}
                     </td>
                     <td className="py-3 px-2">
                       {getStatusIcon(withdrawal.status)}

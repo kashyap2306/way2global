@@ -7,7 +7,7 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import LandingPage from './pages/LandingPage';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
-import UserDetails from './pages/UserDetails';
+
 import HomePage from './pages/HomePage';
 import ReferralsPage from './pages/ReferralsPage';
 import TopupPage from './pages/TopupPage';
@@ -30,8 +30,6 @@ import GlobalIncomeManagement from './pages/admin/GlobalIncomeManagement';
 import WalletPage from './pages/WalletPage';
 import WithdrawalPage from './pages/WithdrawalPage';
 import ProfilePage from './pages/ProfilePage';
-import TestNewSystem from './pages/TestNewSystem';
-
 import './App.css';
 
 const AppContent: React.FC = () => {
@@ -43,24 +41,13 @@ const AppContent: React.FC = () => {
   React.useEffect(() => {
     if (currentUser && userData && !redirectedRef.current) {
       const currentPath = window.location.pathname;
-      
-      // Check if profile is incomplete (missing required fields)
-      const isProfileIncomplete = !userData.displayName || !userData.contact || !userData.walletAddress;
-      
-      // If profile is incomplete and not already on user-details page, redirect there
-      if (isProfileIncomplete && !currentPath.startsWith('/user-details')) {
-        redirectedRef.current = true;
-        navigate(`/user-details/${currentUser.uid}`, { replace: true });
-        return;
-      }
-      
       // If user is admin and not on admin route, redirect to admin dashboard
-      if (userData.role === 'admin' && !currentPath.startsWith('/admin') && !isProfileIncomplete) {
+      if (userData.role === 'admin' && !currentPath.startsWith('/admin')) {
         redirectedRef.current = true;
         navigate('/admin', { replace: true });
       }
       // If user is regular user and on admin route, redirect to dashboard
-      else if (userData.role === 'user' && currentPath.startsWith('/admin') && !isProfileIncomplete) {
+      else if (userData.role === 'user' && currentPath.startsWith('/admin')) {
         redirectedRef.current = true;
         navigate('/dashboard', { replace: true });
       }
@@ -82,14 +69,25 @@ const AppContent: React.FC = () => {
         path="/signup" 
         element={currentUser ? <Navigate to="/dashboard" replace /> : <Signup />} 
       />
+
       <Route 
-        path="/user-details/:userId" 
+        path="/topup" 
         element={
-          currentUser ? <UserDetails /> : <Navigate to="/login" replace />
+          currentUser ? <TopupPage /> : <Navigate to="/login" replace />
         } 
       />
       
       {/* Dashboard Routes with Layout */}
+      <Route 
+        path="/dashboard/:uid" 
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <HomePage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } 
+      />
       <Route 
         path="/dashboard" 
         element={
@@ -106,16 +104,6 @@ const AppContent: React.FC = () => {
           <ProtectedRoute>
             <DashboardLayout>
               <ReferralsPage />
-            </DashboardLayout>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/topup" 
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
-              <TopupPage />
             </DashboardLayout>
           </ProtectedRoute>
         } 
@@ -171,17 +159,7 @@ const AppContent: React.FC = () => {
         } 
       />
       
-      {/* Test Routes */}
-      <Route 
-        path="/test-new-system" 
-        element={<TestNewSystem />} 
-      />
-      <Route 
-              path="/global-income-redesigned" 
-              element={<GlobalIncomeSection />}
-            />
-      
-      {/* Support Ticket Routes */}
+      {/* Admin Routes */}
       <Route 
         path="/support" 
         element={

@@ -7,9 +7,9 @@ import {
   createUserWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, setDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
-import { createAllUserDocuments, checkUserDocumentsExist } from '../services/userSignupService';
+import { createAllUserDocuments } from '../services/userSignupService';
 
 interface MLMUserData {
   uid: string;
@@ -88,17 +88,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await updateProfile(auth.currentUser, { displayName });
       }
 
-      // Check if user documents already exist (prevent duplicates)
-      const documentsExist = await checkUserDocumentsExist(user.uid);
-      if (documentsExist) {
-        console.log('[AuthContext] User documents already exist, skipping creation');
-        return user;
-      }
-
-      // Create all required documents using the comprehensive service
-      await createAllUserDocuments(user, displayName, phone, walletAddress, sponsorId);
+      // Use the comprehensive user document creation service
+      // This will generate userCode and create all required documents
+      await createAllUserDocuments(
+        user,
+        displayName,
+        phone,
+        walletAddress,
+        sponsorId
+      );
       
-      console.log('[AuthContext] User signup completed successfully with all documents created');
+      console.log('[AuthContext] User documents created successfully with userCode');
       return user;
       
     } catch (error) {
@@ -178,40 +178,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('[AuthContext] Auth state changed:', user ? user.email : 'No user');
-      setCurrentUser(user);
-      
-      if (user) {
-        // Always fetch fresh user data when auth state changes
-        try {
-          console.log('[AuthContext] Fetching user data for UID:', user.uid);
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const fetchedUserData = userDoc.data() as MLMUserData;
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      console.log('[AuthContext] Auth state changed:', firebaseUser ? firebaseUser.email : 'No user');
+      setCurrentUser(firebaseUser);
+
+      if (firebaseUser) {
+        // Set up real-time listener for user data
+        const userRef = doc(db, "users", firebaseUser.uid);
+        const unsubDoc = onSnapshot(userRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const fetchedUserData = docSnap.data() as MLMUserData;
             setUserData({
               ...fetchedUserData,
-              uid: user.uid
+              uid: firebaseUser.uid
             });
-            console.log('[AuthContext] User data loaded successfully');
+            console.log('[AuthContext] User data updated via real-time listener');
           } else {
-            console.error('[AuthContext] User document not found for authenticated user:', user.uid);
-            // Show user-friendly error message
-            alert('Your account data is missing. Please contact support to recreate your account.');
+            console.error('[AuthContext] User document not found:', firebaseUser.uid);
             setUserData(null);
           }
-        } catch (error) {
-          console.error('[AuthContext] Error fetching user data:', error);
-          setUserData(null);
-        }
+          setLoading(false);
+        });
+        
+        // Return cleanup function for the document listener
+        return unsubDoc;
       } else {
         setUserData(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []); // Empty dependency array to avoid infinite loops
 
   const value: AuthContextType = {
@@ -228,7 +225,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {loading ? (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-gray-600">Loading...</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

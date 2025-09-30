@@ -60,7 +60,7 @@ export const createUserDocumentTemplate = (
   sponsorId: sponsorId || null,
   referrals: [],
   rank: 'Azurite', // Instant Azurite unlock with $5 activation
-  rankActivatedAt: serverTimestamp(),
+  rankActivatedAt: null, // Will be set when activated
   activationAmount: 5, // $5 activation amount
   balance: 0,
   lockedBalance: 0, // New: locked balance starts at 0
@@ -73,8 +73,8 @@ export const createUserDocumentTemplate = (
   teamSize: 1,
   nextRankTopUpAmount: 10, // Next rank (Malachite) costs $10
   minWithdrawEligibleAt: null,
-  status: 'active',
-  isActive: true, // Activated immediately upon registration
+  status: 'Inactive', // Start as Inactive - requires $5 topup to activate
+  isActive: false, // Not activated until payment is made
   role: 'user',
   level: 1,
   currentCycle: 0,
@@ -93,7 +93,7 @@ export const createUserDocumentTemplate = (
   joinedAt: serverTimestamp(),
   createdAt: serverTimestamp(),
   updatedAt: serverTimestamp(),
-  lastLoginAt: serverTimestamp()
+  lastLoginAt: null // Will be set on first login after activation
 });
 
 export const createTransactionInitTemplate = (uid: string, userCode: string) => ({

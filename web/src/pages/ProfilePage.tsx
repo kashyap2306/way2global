@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getMLMUser, type MLMUser } from '../services/firestoreService';
 import { updateProfile, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db, storage, auth } from '../config/firebase';
 import { Copy, Camera, Eye, EyeOff, User, Mail, Phone, Calendar, Award, Link, Wallet } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -53,34 +53,39 @@ const ProfilePage: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchUserData();
-  }, [currentUser]);
-
-  const fetchUserData = async () => {
     if (!currentUser) return;
+
+    setLoading(true);
     
-    try {
-      setLoading(true);
-      const user = await getMLMUser(currentUser.uid);
-      if (user) {
-        setUserData(user);
+    // Set up real-time listener for user data
+    const userRef = doc(db, 'users', currentUser.uid);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const userData = { uid: doc.id, ...doc.data() } as MLMUser;
+        setUserData(userData);
         setProfileForm({
-          displayName: user.displayName || '',
-          fullName: user.fullName || '',
-          contact: user.contact || '',
-          phone: user.phone || '',
-          walletAddress: user.walletAddress || '',
-          usdtAddress: user.usdtAddress || '',
-          profileImageUrl: user.profileImageUrl || ''
+          displayName: userData.displayName || '',
+          fullName: userData.fullName || '',
+          contact: userData.contact || '',
+          phone: userData.phone || '',
+          walletAddress: userData.walletAddress || '',
+          usdtAddress: userData.usdtAddress || '',
+          profileImageUrl: userData.profileImageUrl || ''
         });
+      } else {
+        console.error('User document does not exist');
+        toast.error('User profile not found');
       }
-    } catch (error) {
+      setLoading(false);
+    }, (error) => {
       console.error('Error fetching user data:', error);
       toast.error('Failed to load profile data');
-    } finally {
       setLoading(false);
-    }
-  };
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }, [currentUser]);
 
   const copyReferralLink = () => {
     if (userData?.userCode) {
@@ -312,7 +317,7 @@ const ProfilePage: React.FC = () => {
             <h2 className="text-xl font-semibold text-white">{userData?.displayName || 'User Name'}</h2>
             <p className="text-slate-300">{userData?.email}</p>
             <p className="text-sm text-green-400 font-medium">
-              {userData?.status === 'active' ? 'Active Member' : 'Inactive Member'}
+              {userData?.status === 'Active' ? 'Active Member' : 'Inactive Member'}
             </p>
           </div>
         </div>
@@ -345,6 +350,16 @@ const ProfilePage: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 uppercase tracking-wide flex items-center gap-2">
+                <Phone size={16} />
+                Phone Number
+              </label>
+              <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600/30">
+                <p className="text-white font-semibold text-sm sm:text-base">{userData?.phone || userData?.contact || 'Not provided'}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide flex items-center gap-2">
                 <Mail size={16} />
                 Email (Locked)
               </label>
@@ -353,23 +368,17 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300 uppercase tracking-wide flex items-center gap-2">
-                <Phone size={16} />
-                Phone
-              </label>
-              <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600/30">
-                <p className="text-white font-semibold text-sm sm:text-base">{userData?.phone || 'Not provided'}</p>
-              </div>
-            </div>
+
+
+
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 uppercase tracking-wide flex items-center gap-2">
                 <Award size={16} />
-                Rank/Level
+                Current Rank
               </label>
               <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600/30">
-                <p className="text-white font-semibold text-sm sm:text-base capitalize">{userData?.rank || 'Azurite'} - Level {userData?.level || 1}</p>
+                <p className="text-white font-semibold text-sm sm:text-base capitalize">{userData?.currentRank || userData?.rank || 'Not Ranked Yet'}</p>
               </div>
             </div>
           </div>
@@ -378,6 +387,10 @@ const ProfilePage: React.FC = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-white mb-4">Financial & Referral</h3>
             
+            
+
+            
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 uppercase tracking-wide flex items-center gap-2">
                 <Wallet size={16} />
@@ -385,7 +398,7 @@ const ProfilePage: React.FC = () => {
               </label>
               <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600/30">
                 <p className="text-white font-semibold text-sm sm:text-base font-mono break-all">
-                  {userData?.usdtAddress || 'Not provided'}
+                  {userData?.walletAddress || 'Not Available'}
                 </p>
               </div>
             </div>
@@ -427,7 +440,7 @@ const ProfilePage: React.FC = () => {
       {/* Account Security */}
       <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-purple-900 rounded-2xl shadow-md p-4 sm:p-6 backdrop-blur-sm border border-slate-700/50 w-full max-w-full">
         <h3 className="text-lg sm:text-xl font-semibold text-white mb-4">Account Security</h3>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col gap-3">
           <button 
             onClick={() => setIsPasswordModalOpen(true)}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 font-medium text-sm sm:text-base"

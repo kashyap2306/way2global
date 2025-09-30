@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import DashboardCards from '../components/dashboard/DashboardCards';
@@ -25,15 +26,25 @@ interface GlobalPoolStatus {
 
 const HomePage: React.FC = () => {
   const { currentUser } = useAuth();
+  const { uid } = useParams<{ uid: string }>();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [referralLink, setReferralLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [globalPoolStatus, setGlobalPoolStatus] = useState<GlobalPoolStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUserData = useCallback(async () => {
     try {
-      const userDocRef = doc(db, 'users', currentUser?.uid || '');
+      // Use UID from params if available, otherwise use current user's UID
+      const targetUid = uid || currentUser?.uid;
+      if (!targetUid) {
+        setError("User not logged in or UID not provided.");
+        setLoading(false);
+        return;
+      }
+
+      const userDocRef = doc(db, 'users', targetUid);
       const userSnap = await getDoc(userDocRef);
 
       if (userSnap.exists()) {
@@ -47,19 +58,82 @@ const HomePage: React.FC = () => {
           // Global pool status functionality removed - using new direct pool generation system
           setGlobalPoolStatus(null);
         }
+      } else {
+        setError("User data not found.");
       }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
+    } catch (err: any) {
+      console.error('Error fetching user data:', err);
+      setError(err.message || "Failed to fetch user data.");
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, uid]);
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser || uid) {
       fetchUserData();
     }
-  }, [currentUser, fetchUserData]);
+  }, [currentUser?.uid, uid]);
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-600">Loading user session...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-600">Loading dashboard data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <h2 className="text-xl font-semibold text-red-700 mb-4">Error Loading Dashboard</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={fetchUserData}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <h2 className="text-xl font-semibold text-orange-700 mb-4">User Data Not Found</h2>
+          <p className="text-orange-600 mb-4">Please ensure your account is properly set up.</p>
+          <button
+            onClick={fetchUserData}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 px-0 sm:px-4">
