@@ -23,7 +23,18 @@ export { onUserCreated } from './triggers/onUserCreated';
 export { onActivationTxCreated } from './triggers/onActivationTxCreated';
 
 // Export scheduled functions
-export { scheduledGlobalCycle } from './triggers/scheduledGlobalCycle';
+// export { scheduledGlobalCycle } from './triggers/scheduledGlobalCycle';
+export { autoPoolIncomeGenerator, manualPoolIncomeGeneration } from './triggers/autoPoolIncomeGenerator';
+
+// Export new API endpoints
+export { claimLockedIncome } from './api/claimLockedIncome';
+export { activateRank, activateRankHttp } from './api/activateRank';
+export { 
+  getPlatformSettings, 
+  updatePlatformSettings, 
+  getPlatformSettingsHttp, 
+  updatePlatformSettingsHttp 
+} from './api/platformSettings';
 
 // Health check endpoint
 export const healthCheck = functions.https.onRequest((req, res) => {

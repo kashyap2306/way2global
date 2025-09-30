@@ -50,7 +50,7 @@ interface AuthContextType {
   user: User | null; // Alias for backward compatibility
   userDoc: MLMUserData | null; // Alias for backward compatibility
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, displayName: string, sponsorId?: string) => Promise<User>;
+  signup: (email: string, password: string, displayName: string, phone?: string, walletAddress?: string, sponsorId?: string) => Promise<User>;
   logout: () => Promise<void>;
   loading: boolean;
   updateUserData: (data: Partial<MLMUserData>) => Promise<void>;
@@ -75,7 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userData, setUserData] = useState<MLMUserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const signup = async (email: string, password: string, displayName: string, sponsorId?: string): Promise<User> => {
+  const signup = async (email: string, password: string, displayName: string, phone?: string, walletAddress?: string, sponsorId?: string): Promise<User> => {
     try {
       console.log('[AuthContext] Starting signup process for:', email);
       
@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Create all required documents using the comprehensive service
-      await createAllUserDocuments(user, displayName, sponsorId);
+      await createAllUserDocuments(user, displayName, phone, walletAddress, sponsorId);
       
       console.log('[AuthContext] User signup completed successfully with all documents created');
       return user;

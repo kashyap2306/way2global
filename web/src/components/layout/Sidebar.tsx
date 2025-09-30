@@ -130,13 +130,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       adminOnly: true,
     },
     {
-      id: 'admin-audit-logs',
-      label: 'Audit Logs',
-      icon: <Shield className="h-5 w-5" />,
-      route: '/admin/audit-logs',
-      adminOnly: true,
-    },
-    {
       id: 'admin-settings',
       label: 'Platform Settings',
       icon: <Settings className="h-5 w-5" />,

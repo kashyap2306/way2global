@@ -31,10 +31,12 @@ var UserStatus;
 var TransactionType;
 (function (TransactionType) {
     TransactionType["ACTIVATION"] = "activation";
-    TransactionType["AUTO_TOPUP"] = "auto_topup";
+    TransactionType["REFERRAL"] = "referral";
+    TransactionType["LEVEL"] = "level";
+    TransactionType["GLOBAL"] = "global";
     TransactionType["WITHDRAWAL"] = "withdrawal";
     TransactionType["DEPOSIT"] = "deposit";
-    TransactionType["TRANSFER"] = "transfer";
+    TransactionType["ADMIN_ADJUSTMENT"] = "admin_adjustment";
 })(TransactionType || (exports.TransactionType = TransactionType = {}));
 var TransactionStatus;
 (function (TransactionStatus) {
@@ -55,7 +57,6 @@ var IncomeType;
     IncomeType["REFERRAL"] = "referral";
     IncomeType["LEVEL"] = "level";
     IncomeType["GLOBAL"] = "global";
-    IncomeType["RE_TOPUP"] = "re_topup";
 })(IncomeType || (exports.IncomeType = IncomeType = {}));
 var WithdrawalStatus;
 (function (WithdrawalStatus) {

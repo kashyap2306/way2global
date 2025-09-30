@@ -1,0 +1,350 @@
+"use strict";
+/**
+ * New Global Income Engine - User-centric pool-based income system
+ * Replaces the old MLM income engine with a simplified user-centric approach
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.newIncomeEngine = exports.NewIncomeEngine = void 0;
+const admin = __importStar(require("firebase-admin"));
+const logger_1 = require("../utils/logger");
+const config_1 = require("../config");
+const logger = (0, logger_1.createLogger)('NewIncomeEngine');
+class NewIncomeEngine {
+    constructor() {
+        this.db = admin.firestore();
+    }
+    /**
+     * Process rank activation and create income pool
+     */
+    async processRankActivation(userUID, rank, activationAmount, transactionId) {
+        try {
+            const batch = this.db.batch();
+            // Create income pool for the user's rank
+            const poolRef = this.db.collection(config_1.collections.INCOME_POOLS).doc();
+            const poolData = {
+                id: poolRef.id,
+                userUID,
+                rank,
+                poolIncome: 0,
+                maxPoolIncome: this.getMaxPoolIncome(rank),
+                isLocked: true,
+                canClaim: false,
+                directReferralsCount: 0,
+                requiredDirectReferrals: await this.getDirectReferralRequirement(),
+                activatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                lastIncomeAt: null,
+                claimedAt: null,
+                metadata: {
+                    activationAmount,
+                    transactionId
+                }
+            };
+            batch.set(poolRef, poolData);
+            // Update user's rank activation status
+            const userRef = this.db.collection(config_1.collections.USERS).doc(userUID);
+            batch.update(userRef, {
+                [`rankActivations.${rank}`]: {
+                    isActive: true,
+                    activatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    poolId: poolRef.id
+                }
+            });
+            await batch.commit();
+            // Start income accrual for this rank
+            await this.startIncomeAccrual(userUID, rank, poolRef.id);
+            await logger.info(logger_1.LogCategory.MLM, `Rank activation processed: ${rank} for user ${userUID}`, userUID, { rank, activationAmount, poolId: poolRef.id });
+        }
+        catch (error) {
+            await logger.error(logger_1.LogCategory.MLM, 'Failed to process rank activation', userUID, { error: error.message, rank, activationAmount });
+            throw error;
+        }
+    }
+    /**
+     * Start income accrual for a user's rank pool
+     */
+    async startIncomeAccrual(userUID, rank, poolId) {
+        try {
+            // Income accrual logic - this would be triggered by global events
+            // For now, we'll set up the structure for income to be added
+            const incomeAmount = this.calculatePoolIncome(rank);
+            if (incomeAmount > 0) {
+                await this.addIncomeToPool(poolId, incomeAmount, 'pool_generation', userUID);
+            }
+        }
+        catch (error) {
+            await logger.error(logger_1.LogCategory.MLM, 'Failed to start income accrual', userUID, { error: error.message, rank, poolId });
+        }
+    }
+    /**
+     * Add income to a user's pool
+     */
+    async addIncomeToPool(poolId, amount, source, sourceUID) {
+        try {
+            const poolRef = this.db.collection(config_1.collections.INCOME_POOLS).doc(poolId);
+            const poolDoc = await poolRef.get();
+            if (!poolDoc.exists) {
+                throw new Error(`Income pool ${poolId} not found`);
+            }
+            const poolData = poolDoc.data();
+            const newPoolIncome = poolData.poolIncome + amount;
+            // Check if pool income exceeds maximum
+            if (newPoolIncome > poolData.maxPoolIncome) {
+                const actualAmount = poolData.maxPoolIncome - poolData.poolIncome;
+                if (actualAmount <= 0) {
+                    return; // Pool is already at maximum
+                }
+                amount = actualAmount;
+            }
+            // Update pool income
+            await poolRef.update({
+                poolIncome: admin.firestore.FieldValue.increment(amount),
+                lastIncomeAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            // Create income transaction record
+            await this.createPoolIncomeTransaction(poolData.userUID, amount, source, poolId, sourceUID);
+            await logger.info(logger_1.LogCategory.MLM, `Income added to pool: ${amount} for user ${poolData.userUID}`, poolData.userUID, { poolId, amount, source, rank: poolData.rank });
+        }
+        catch (error) {
+            await logger.error(logger_1.LogCategory.MLM, 'Failed to add income to pool', '', { error: error.message, poolId, amount, source });
+            throw error;
+        }
+    }
+    /**
+     * Update direct referral count for user's pools
+     */
+    async updateDirectReferralCount(userUID) {
+        try {
+            // Get user's direct referrals count
+            const directReferralsCount = await this.getDirectReferralsCount(userUID);
+            // Update all user's income pools
+            const poolsQuery = await this.db
+                .collection(config_1.collections.INCOME_POOLS)
+                .where('userUID', '==', userUID)
+                .get();
+            const batch = this.db.batch();
+            const requiredReferrals = await this.getDirectReferralRequirement();
+            poolsQuery.docs.forEach(doc => {
+                const poolData = doc.data();
+                const canClaim = directReferralsCount >= requiredReferrals && poolData.poolIncome > 0;
+                batch.update(doc.ref, {
+                    directReferralsCount,
+                    canClaim
+                });
+            });
+            await batch.commit();
+            await logger.info(logger_1.LogCategory.MLM, `Direct referral count updated: ${directReferralsCount} for user ${userUID}`, userUID, { directReferralsCount, requiredReferrals });
+        }
+        catch (error) {
+            await logger.error(logger_1.LogCategory.MLM, 'Failed to update direct referral count', userUID, { error: error.message });
+            throw error;
+        }
+    }
+    /**
+     * Claim income from pool to wallet
+     */
+    async claimPoolIncome(userUID, poolId) {
+        try {
+            const poolRef = this.db.collection(config_1.collections.INCOME_POOLS).doc(poolId);
+            const poolDoc = await poolRef.get();
+            if (!poolDoc.exists) {
+                throw new Error(`Income pool ${poolId} not found`);
+            }
+            const poolData = poolDoc.data();
+            // Verify user owns this pool
+            if (poolData.userUID !== userUID) {
+                throw new Error('Unauthorized: User does not own this pool');
+            }
+            // Check if user can claim
+            if (!poolData.canClaim || poolData.poolIncome <= 0) {
+                throw new Error('Cannot claim income: Requirements not met or no income available');
+            }
+            const claimAmount = poolData.poolIncome;
+            // Use transaction to ensure atomicity
+            await this.db.runTransaction(async (transaction) => {
+                // Reset pool income
+                transaction.update(poolRef, {
+                    poolIncome: 0,
+                    claimedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    canClaim: false
+                });
+                // Add to user's available balance
+                const userRef = this.db.collection(config_1.collections.USERS).doc(userUID);
+                transaction.update(userRef, {
+                    availableBalance: admin.firestore.FieldValue.increment(claimAmount)
+                });
+                // Create claim transaction
+                const transactionRef = this.db.collection(config_1.collections.TRANSACTIONS).doc();
+                transaction.set(transactionRef, {
+                    uid: userUID,
+                    type: 'income_claim',
+                    amount: claimAmount,
+                    status: 'completed',
+                    description: `Income claimed from ${poolData.rank} pool`,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    metadata: {
+                        poolId,
+                        rank: poolData.rank
+                    }
+                });
+            });
+            await logger.info(logger_1.LogCategory.MLM, `Income claimed: ${claimAmount} from pool ${poolId}`, userUID, { poolId, claimAmount, rank: poolData.rank });
+            return claimAmount;
+        }
+        catch (error) {
+            await logger.error(logger_1.LogCategory.MLM, 'Failed to claim pool income', userUID, { error: error.message, poolId });
+            throw error;
+        }
+    }
+    /**
+     * Get user's income pools
+     */
+    async getUserIncomePools(userUID) {
+        try {
+            const poolsQuery = await this.db
+                .collection(config_1.collections.INCOME_POOLS)
+                .where('userUID', '==', userUID)
+                .orderBy('activatedAt', 'desc')
+                .get();
+            return poolsQuery.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+        }
+        catch (error) {
+            await logger.error(logger_1.LogCategory.MLM, 'Failed to get user income pools', userUID, { error: error.message });
+            throw error;
+        }
+    }
+    /**
+     * Process referral income when someone joins under a user
+     */
+    async processReferralIncome(sponsorUID, newUserUID, activationAmount, transactionId) {
+        try {
+            const referralIncome = activationAmount * (config_1.mlmConfig.incomes.referral.percentage / 100);
+            // Add to sponsor's available balance directly (no pool needed for referral income)
+            const userRef = this.db.collection(config_1.collections.USERS).doc(sponsorUID);
+            await userRef.update({
+                availableBalance: admin.firestore.FieldValue.increment(referralIncome)
+            });
+            // Create referral income transaction
+            const transactionRef = this.db.collection(config_1.collections.TRANSACTIONS).doc();
+            await transactionRef.set({
+                uid: sponsorUID,
+                type: 'referral_income',
+                amount: referralIncome,
+                status: 'completed',
+                description: `Referral income from ${newUserUID}`,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                metadata: {
+                    referredUserUID: newUserUID,
+                    activationAmount,
+                    percentage: config_1.mlmConfig.incomes.referral.percentage
+                }
+            });
+            // Update direct referral count
+            await this.updateDirectReferralCount(sponsorUID);
+            await logger.info(logger_1.LogCategory.MLM, `Referral income processed: ${referralIncome} for sponsor ${sponsorUID}`, sponsorUID, { newUserUID, referralIncome, activationAmount });
+        }
+        catch (error) {
+            await logger.error(logger_1.LogCategory.MLM, 'Failed to process referral income', sponsorUID, { error: error.message, newUserUID, activationAmount });
+            throw error;
+        }
+    }
+    // Helper methods
+    getMaxPoolIncome(rank) {
+        const rankConfig = config_1.mlmConfig.ranks[rank];
+        if (!rankConfig)
+            return 0;
+        // Calculate max pool income based on rank (example: 100x activation amount)
+        return rankConfig.activationAmount * 100;
+    }
+    calculatePoolIncome(rank) {
+        const rankConfig = config_1.mlmConfig.ranks[rank];
+        if (!rankConfig)
+            return 0;
+        // Example: 1% of activation amount per income cycle
+        return rankConfig.activationAmount * 0.01;
+    }
+    async getDirectReferralsCount(userUID) {
+        try {
+            const referralsQuery = await this.db
+                .collection(config_1.collections.USERS)
+                .where('sponsorUID', '==', userUID)
+                .where('status', '==', 'active')
+                .get();
+            return referralsQuery.size;
+        }
+        catch (error) {
+            return 0;
+        }
+    }
+    async getDirectReferralRequirement() {
+        try {
+            const settingsDoc = await this.db
+                .collection(config_1.collections.SETTINGS)
+                .doc('platform')
+                .get();
+            if (settingsDoc.exists) {
+                const settings = settingsDoc.data();
+                return settings.directReferralRequirement || 2;
+            }
+            return 2; // Default requirement
+        }
+        catch (error) {
+            return 2; // Default requirement
+        }
+    }
+    async createPoolIncomeTransaction(userUID, amount, source, poolId, sourceUID) {
+        const transactionRef = this.db.collection(config_1.collections.INCOME_TRANSACTIONS).doc();
+        await transactionRef.set({
+            uid: userUID,
+            type: 'pool_income',
+            amount,
+            source,
+            poolId,
+            sourceUID,
+            status: 'completed',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            metadata: {
+                poolId,
+                source
+            }
+        });
+    }
+}
+exports.NewIncomeEngine = NewIncomeEngine;
+exports.newIncomeEngine = new NewIncomeEngine();
+//# sourceMappingURL=newIncomeEngine.js.map

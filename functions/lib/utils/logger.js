@@ -58,6 +58,8 @@ var LogCategory;
     LogCategory["SYSTEM"] = "system";
     LogCategory["API"] = "api";
     LogCategory["DATABASE"] = "database";
+    LogCategory["ADMIN"] = "admin";
+    LogCategory["INCOME"] = "income";
 })(LogCategory || (exports.LogCategory = LogCategory = {}));
 class Logger {
     constructor(functionName = 'unknown', requestId = '') {

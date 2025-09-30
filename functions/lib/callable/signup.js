@@ -257,10 +257,37 @@ async function createAuthUser(userData) {
 async function updateSponsorReferrals(sponsorId, newUserId) {
     const db = admin.firestore();
     try {
-        await db.collection(config_1.collections.USERS).doc(sponsorId).update({
+        // Get current sponsor data to check direct referrals count
+        const sponsorDoc = await db.collection(config_1.collections.USERS).doc(sponsorId).get();
+        const sponsorData = sponsorDoc.data();
+        if (!sponsorData) {
+            throw new Error('Sponsor not found');
+        }
+        const currentDirectReferrals = sponsorData.directReferrals || 0;
+        const newDirectReferrals = currentDirectReferrals + 1;
+        // Update sponsor with new referral and direct referral count
+        const updateData = {
             referrals: admin.firestore.FieldValue.arrayUnion(newUserId),
+            directReferrals: newDirectReferrals,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        };
+        // If sponsor reaches 2 direct referrals, make them eligible to claim income
+        if (newDirectReferrals >= 2 && !sponsorData.claimEligible) {
+            updateData.claimEligible = true;
+            // Mark all unclaimed income transactions as claimable
+            const incomeQuery = await db.collection(config_1.collections.INCOME_TRANSACTIONS)
+                .where('userId', '==', sponsorId)
+                .where('claimed', '==', false)
+                .get();
+            const batch = db.batch();
+            incomeQuery.docs.forEach(doc => {
+                batch.update(doc.ref, { claimable: true });
+            });
+            if (!incomeQuery.empty) {
+                await batch.commit();
+            }
+        }
+        await db.collection(config_1.collections.USERS).doc(sponsorId).update(updateData);
     }
     catch (error) {
         await logger_1.logger.error(logger_1.LogCategory.SYSTEM, 'Failed to update sponsor referrals', error);

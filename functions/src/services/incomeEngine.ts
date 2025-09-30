@@ -7,7 +7,6 @@ import {
   calculateReferralIncome,
   calculateLevelIncome,
   calculateGlobalIncome,
-  calculateReTopupIncome,
   roundToTwoDecimals,
   safeAdd
 } from '../utils/math';
@@ -17,7 +16,7 @@ import { collections, mlmConfig } from '../config';
 const logger = createLogger('IncomeEngine');
 
 export interface IncomeCalculation {
-  type: 'referral' | 'level' | 'global' | 'retopup';
+  type: 'referral' | 'level' | 'global';
   amount: number;
   recipientUID: string;
   sourceUID: string;
@@ -115,7 +114,7 @@ export class IncomeEngine {
       await logger.error(
         LogCategory.MLM,
         'Failed to process referral income',
-        error as Error,
+        error instanceof Error ? error : new Error(String(error)),
         sponsorUID,
         { activatorUID, activationAmount, transactionId, rank }
       );
@@ -197,7 +196,7 @@ export class IncomeEngine {
       await logger.error(
         LogCategory.MLM,
         'Failed to process level income',
-        error as Error,
+        error instanceof Error ? error : new Error(String(error)),
         activatorUID,
         { activationAmount, transactionId, rank }
       );
@@ -206,7 +205,7 @@ export class IncomeEngine {
   }
 
   /**
-   * Process global income cycles
+   * Process global income cycles - NEW LOGIC: Direct pool generation only
    */
   async processGlobalIncome(
     activatorUID: string,
@@ -215,35 +214,55 @@ export class IncomeEngine {
     rank: string
   ): Promise<void> {
     try {
-      // Check if user is eligible for global income
-      const isEligible = await this.checkGlobalIncomeEligibility(activatorUID, rank);
-      if (!isEligible) {
-        await logger.info(
-          LogCategory.MLM,
-          'User not eligible for global income',
-          activatorUID,
-          { rank }
-        );
-        return;
-      }
+      // Calculate income amount for the specific rank pool
+      // Remove unused variable
+      // const rankConfig = mlmConfig.ranks[rank as keyof typeof mlmConfig.ranks];
+      const poolIncomeAmount = roundToTwoDecimals(
+        (activationAmount * mlmConfig.incomes.global.percentage) / 100
+      );
 
-      // Add user to global cycle
-      const cycleData = await this.addToGlobalCycle(activatorUID, rank);
-      
-      if (cycleData.isComplete) {
-        // Process global cycle payout
-        await this.processGlobalCyclePayout(cycleData);
-      }
+      // Create income record directly for the activator's rank pool
+      const incomeData = {
+        uid: activatorUID,
+        type: 'global',
+        amount: poolIncomeAmount,
+        sourceUID: activatorUID,
+        sourceTransactionId: transactionId,
+        rank,
+        status: 'locked', // Locked until 2 direct referrals
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        processedAt: null,
+        metadata: {
+          poolType: 'direct_generation',
+          activationAmount,
+          requiresDirectReferrals: 2,
+          canClaim: false
+        }
+      };
+
+      const incomeRef = await this.db.collection(collections.INCOMES).add(incomeData);
+
+      // Update user's locked balance instead of available balance
+      await this.updateUserLockedBalance(activatorUID, poolIncomeAmount, 'add');
+
+      // Create income transaction for tracking
+      await this.createIncomeTransaction(
+        activatorUID,
+        poolIncomeAmount,
+        'global',
+        incomeRef.id,
+        `Global pool income generated for ${rank} rank (Locked)`
+      );
 
       await logger.info(
         LogCategory.MLM,
-        'User added to global cycle',
+        'Global pool income generated directly',
         activatorUID,
         { 
           rank, 
-          cycleId: cycleData.cycleId,
-          position: cycleData.position,
-          isComplete: cycleData.isComplete 
+          amount: poolIncomeAmount,
+          status: 'locked',
+          transactionId
         }
       );
 
@@ -259,84 +278,7 @@ export class IncomeEngine {
     }
   }
 
-  /**
-   * Process re-topup income
-   */
-  async processReTopupIncome(
-    activatorUID: string,
-    sponsorUID: string,
-    activationAmount: number,
-    transactionId: string,
-    rank: string
-  ): Promise<void> {
-    try {
-      const incomeAmount = calculateReTopupIncome(activationAmount);
-      
-      if (incomeAmount <= 0) {
-        await logger.warn(
-          LogCategory.MLM,
-          'Re-topup income calculation resulted in zero amount',
-          sponsorUID,
-          { activatorUID, activationAmount, rank }
-        );
-        return;
-      }
 
-      // Create income record
-      const incomeData = {
-        uid: sponsorUID,
-        type: 'retopup',
-        amount: incomeAmount,
-        sourceUID: activatorUID,
-        sourceTransactionId: transactionId,
-        rank,
-        status: 'pending',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        processedAt: null,
-        metadata: {
-          activationAmount,
-          retopupPercentage: mlmConfig.incomes.referral.percentage
-        }
-      };
-
-      const incomeRef = await this.db.collection(collections.INCOMES).add(incomeData);
-
-      // Update user's available balance
-      await this.updateUserBalance(sponsorUID, incomeAmount, 'add');
-
-      // Create income transaction
-      await this.createIncomeTransaction(
-        sponsorUID,
-        incomeAmount,
-        'retopup',
-        incomeRef.id,
-        `Re-topup income from ${activatorUID}`
-      );
-
-      await logger.info(
-        LogCategory.MLM,
-        'Re-topup income processed successfully',
-        sponsorUID,
-        { 
-          activatorUID, 
-          incomeAmount, 
-          activationAmount, 
-          rank,
-          incomeId: incomeRef.id 
-        }
-      );
-
-    } catch (error) {
-      await logger.error(
-        LogCategory.MLM,
-        'Failed to process re-topup income',
-        error as Error,
-        sponsorUID,
-        { activatorUID, activationAmount, transactionId, rank }
-      );
-      throw error;
-    }
-  }
 
   /**
    * Get upline chain for level income calculation
@@ -377,145 +319,145 @@ export class IncomeEngine {
   /**
    * Check if user is eligible for global income
    */
-  private async checkGlobalIncomeEligibility(userUID: string, rank: string): Promise<boolean> {
-    const rankConfig = mlmConfig.ranks[rank as keyof typeof mlmConfig.ranks];
-    return rankConfig?.benefits?.globalIncome === true;
-  }
+  // Removed unused method - global income eligibility is now handled differently
+  // private async checkGlobalIncomeEligibility(userUID: string, rank: string): Promise<boolean> {
+  //   const rankConfig = mlmConfig.ranks[rank as keyof typeof mlmConfig.ranks];
+  //   return rankConfig?.benefits?.globalIncome === true;
+  // }
 
   /**
    * Add user to global cycle
    */
-  private async addToGlobalCycle(userUID: string, rank: string): Promise<GlobalCycleData> {
-    // Find or create active cycle for this rank
-    const activeCycleQuery = await this.db
-      .collection(collections.GLOBAL_CYCLES)
-      .where('rank', '==', rank)
-      .where('isComplete', '==', false)
-      .orderBy('createdAt', 'asc')
-      .limit(1)
-      .get();
+  // Removed unused method - global cycle management is now handled differently
+  // private async addToGlobalCycle(userUID: string, rank: string): Promise<GlobalCycleData> {
+  //   // Find or create active cycle for this rank
+  //   const activeCycleQuery = await this.db
+  //     .collection(collections.GLOBAL_CYCLES)
+  //     .where('rank', '==', rank)
+  //     .where('isComplete', '==', false)
+  //     .orderBy('createdAt', 'asc')
+  //     .limit(1)
+  //     .get();
 
-    let cycleDoc;
-    let cycleData;
+  //   let cycleDoc;
+  //   let cycleData;
 
-    if (activeCycleQuery.empty) {
-      // Create new cycle
-      const newCycleData = {
-        rank,
-        participants: [userUID],
-        totalAmount: 0,
-        isComplete: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        completedAt: null
-      };
+  //   if (activeCycleQuery.empty) {
+  //     // Create new cycle
+  //     const newCycleData = {
+  //       rank,
+  //       participants: [userUID],
+  //       totalAmount: 0,
+  //       isComplete: false,
+  //       createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  //       completedAt: null
+  //     };
 
-      cycleDoc = await this.db.collection(collections.GLOBAL_CYCLES).add(newCycleData);
-      cycleData = { ...newCycleData, id: cycleDoc.id };
-    } else {
-      // Add to existing cycle
-      cycleDoc = activeCycleQuery.docs[0];
-      cycleData = { ...cycleDoc.data(), id: cycleDoc.id };
+  //     cycleDoc = await this.db.collection(collections.GLOBAL_CYCLES).add(newCycleData);
+  //     cycleData = { ...newCycleData, id: cycleDoc.id };
+  //   } else {
+  //     // Add to existing cycle
+  //     cycleDoc = activeCycleQuery.docs[0];
+  //     cycleData = { ...cycleDoc.data(), id: cycleDoc.id };
       
-      // Add user to participants
-      await (cycleDoc as any).ref.update({
-        participants: admin.firestore.FieldValue.arrayUnion(userUID)
-      });
+  //     // Add user to participants
+  //     await (cycleDoc as any).ref.update({
+  //       participants: admin.firestore.FieldValue.arrayUnion(userUID)
+  //     });
       
-      (cycleData as any).participants.push(userUID);
-    }
+  //     (cycleData as any).participants.push(userUID);
+  //   }
 
-    const position = (cycleData as any).participants.length;
-    const cycleSize = mlmConfig.incomes.global.cycleSize;
-    const isComplete = position >= cycleSize;
+  //   const position = (cycleData as any).participants.length;
+  //   const cycleSize = mlmConfig.incomes.global.cycleSize;
+  //   const isComplete = position >= cycleSize;
 
-    if (isComplete) {
-      await (cycleDoc as any).ref.update({
-        isComplete: true,
-        completedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-    }
+  //   if (isComplete) {
+  //     await (cycleDoc as any).ref.update({
+  //       isComplete: true,
+  //       completedAt: admin.firestore.FieldValue.serverTimestamp()
+  //     });
+  //   }
 
-    return {
-      cycleId: cycleData.id,
-      rank,
-      position,
-      level: Math.ceil(position / Math.pow(2, Math.floor(Math.log2(position)))),
-      participants: (cycleData as any).participants,
-      totalAmount: (cycleData as any).totalAmount,
-      isComplete
-    };
-  }
+  //   return {
+  //     cycleId: cycleData.id,
+  //     rank,
+  //     position,
+  //     level: Math.ceil(position / Math.pow(2, Math.floor(Math.log2(position)))),
+  //     participants: (cycleData as any).participants,
+  //     totalAmount: (cycleData as any).totalAmount,
+  //     isComplete
+  //   };
+  // }
 
   /**
    * Process global cycle payout
    */
-  private async processGlobalCyclePayout(cycleData: GlobalCycleData): Promise<void> {
-    const rankConfig = mlmConfig.ranks[cycleData.rank as keyof typeof mlmConfig.ranks];
-    const payoutAmount = roundToTwoDecimals(
-      (rankConfig.activationAmount * mlmConfig.incomes.global.percentage) / 100
-    );
+  // Removed unused method - global cycle payout is now handled differently
+  // private async processGlobalCyclePayout(cycleData: GlobalCycleData): Promise<void> {
+  //   const rankConfig = mlmConfig.ranks[cycleData.rank as keyof typeof mlmConfig.ranks];
+  //   const payoutAmount = roundToTwoDecimals(
+  //     (rankConfig.activationAmount * mlmConfig.incomes.global.percentage) / 100
+  //   );
 
-    // Distribute payout across 10 levels
-    const totalLevels = mlmConfig.incomes.global.levels;
+  //   // Distribute payout across 10 levels
+  //   const totalLevels = mlmConfig.incomes.global.levels;
 
-    for (let level = 1; level <= totalLevels; level++) {
-      const levelParticipants = this.getParticipantsAtLevel(cycleData.participants, level);
+  //   for (let level = 1; level <= totalLevels; level++) {
+  //     const levelParticipants = this.getParticipantsAtLevel(cycleData.participants, level);
       
-      for (const participantUID of levelParticipants) {
-        const incomeAmount = calculateGlobalIncome(payoutAmount, level, totalLevels);
+  //     for (const participantUID of levelParticipants) {
+  //       const incomeAmount = calculateGlobalIncome(payoutAmount, level, totalLevels);
         
-        if (incomeAmount <= 0) continue;
+  //       if (incomeAmount <= 0) continue;
 
-        // Create income record
-        const incomeData = {
-          uid: participantUID,
-          type: 'global',
-          amount: incomeAmount,
-          sourceUID: cycleData.cycleId,
-          sourceTransactionId: cycleData.cycleId,
-          level,
-          rank: cycleData.rank,
-          status: 'pending',
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          processedAt: null,
-          metadata: {
-            cycleId: cycleData.cycleId,
-            globalLevel: level,
-            totalParticipants: cycleData.participants.length
-          }
-        };
+  //       // Create income record
+  //       const incomeData = {
+  //         uid: participantUID,
+  //         type: 'global',
+  //         amount: incomeAmount,
+  //         sourceUID: cycleData.cycleId,
+  //         sourceTransactionId: cycleData.cycleId,
+  //         level,
+  //         rank: cycleData.rank,
+  //         status: 'pending',
+  //         createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  //         processedAt: null,
+  //         metadata: {
+  //           cycleId: cycleData.cycleId,
+  //           globalLevel: level,
+  //           totalParticipants: cycleData.participants.length
+  //         }
+  //       };
 
-        const incomeRef = await this.db.collection(collections.INCOMES).add(incomeData);
+  //       const incomeRef = await this.db.collection(collections.INCOMES).add(incomeData);
 
-        // Update user's available balance
-        await this.updateUserBalance(participantUID, incomeAmount, 'add');
+  //       // Update user's available balance
+  //       await this.updateUserBalance(participantUID, incomeAmount, 'add');
 
-        // Create income transaction
-        await this.createIncomeTransaction(
-          participantUID,
-          incomeAmount,
-          'global',
-          incomeRef.id,
-          `Global cycle payout - Level ${level}`
-        );
-      }
-    }
+  //       // Create income transaction
+  //       await this.createIncomeTransaction(
+  //         participantUID,
+  //         incomeAmount,
+  //         'global',
+  //         incomeRef.id,
+  //         `Global cycle payout - Level ${level}`
+  //       );
+  //     }
+  //   }
 
-    // Check for auto top-up and RE-ID generation
-    await this.processAutoTopUpAndREID(cycleData);
-
-    await logger.info(
-      LogCategory.MLM,
-      'Global cycle payout processed',
-      undefined,
-      { 
-        cycleId: cycleData.cycleId,
-        rank: cycleData.rank,
-        participants: cycleData.participants.length,
-        payoutAmount
-      }
-    );
-  }
+  //   await logger.info(
+  //     LogCategory.MLM,
+  //     'Global cycle payout processed',
+  //     undefined,
+  //     { 
+  //       cycleId: cycleData.cycleId,
+  //       rank: cycleData.rank,
+  //       participants: cycleData.participants.length,
+  //       payoutAmount
+  //     }
+  //   );
+  // }
 
   /**
    * Get participants at specific level in binary tree
@@ -527,155 +469,62 @@ export class IncomeEngine {
     return participants.slice(startIndex, endIndex + 1);
   }
 
-  /**
-   * Process auto top-up and RE-ID generation
-   */
-  private async processAutoTopUpAndREID(cycleData: GlobalCycleData): Promise<void> {
-    if (!mlmConfig.globalCycle.autoTopupEnabled) return;
 
-    const firstParticipant = cycleData.participants[0];
-    const currentRank = cycleData.rank;
-    
-    // Get next rank
-    const ranks = Object.keys(mlmConfig.ranks);
-    const currentIndex = ranks.indexOf(currentRank);
-    
-    if (currentIndex < ranks.length - 1) {
-      const nextRank = ranks[currentIndex + 1];
-      const nextRankConfig = mlmConfig.ranks[nextRank as keyof typeof mlmConfig.ranks];
-      
-      // Auto top-up to next rank
-      await this.processAutoTopUp(firstParticipant, nextRank, nextRankConfig.activationAmount);
-    } else if (mlmConfig.globalCycle.reidGenerationEnabled) {
-      // Generate RE-ID for infinite cycles
-      await this.generateREID(firstParticipant, currentRank);
-    }
-  }
 
   /**
-   * Process auto top-up to next rank
-   */
-  private async processAutoTopUp(userUID: string, nextRank: string, amount: number): Promise<void> {
-    try {
-      // Create auto top-up transaction
-      const transactionData = {
-        uid: userUID,
-        type: 'auto_topup',
-        amount,
-        rank: nextRank,
-        status: 'completed',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        metadata: {
-          autoGenerated: true,
-          previousRank: nextRank
-        }
-      };
-
-      const transactionRef = await this.db.collection(collections.TRANSACTIONS).add(transactionData);
-
-      // Update user rank
-      await this.db.collection(collections.USERS).doc(userUID).update({
-        currentRank: nextRank,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      // Process incomes for auto top-up
-      await this.processAllIncomes(userUID, amount, transactionRef.id, nextRank, true);
-
-      await logger.info(
-        LogCategory.MLM,
-        'Auto top-up processed successfully',
-        userUID,
-        { nextRank, amount, transactionId: transactionRef.id }
-      );
-
-    } catch (error) {
-      await logger.error(
-        LogCategory.MLM,
-        'Failed to process auto top-up',
-        error as Error,
-        userUID,
-        { nextRank, amount }
-      );
-    }
-  }
-
-  /**
-   * Generate RE-ID for infinite cycles
-   */
-  private async generateREID(userUID: string, rank: string): Promise<void> {
-    try {
-      const reidData = {
-        originalUID: userUID,
-        rank,
-        isActive: true,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        cycleCount: 1,
-        totalEarnings: 0
-      };
-
-      const reidRef = await this.db.collection(collections.REIDS).add(reidData);
-
-      await logger.info(
-        LogCategory.MLM,
-        'RE-ID generated successfully',
-        userUID,
-        { rank, reidId: reidRef.id }
-      );
-
-    } catch (error) {
-      await logger.error(
-        LogCategory.MLM,
-        'Failed to generate RE-ID',
-        error as Error,
-        userUID,
-        { rank }
-      );
-    }
-  }
-
-  /**
-   * Process all income types for a transaction
+   * Process all incomes for user activation - UPDATED for new workflow
    */
   async processAllIncomes(
     activatorUID: string,
     activationAmount: number,
     transactionId: string,
-    rank: string,
-    isReTopup: boolean = false
+    rank: string
   ): Promise<void> {
     try {
-      // Get user's sponsor
+      // Get user data to find sponsor
       const userDoc = await this.db.collection(collections.USERS).doc(activatorUID).get();
+      
+      if (!userDoc.exists) {
+        throw new Error(`User ${activatorUID} not found`);
+      }
+
       const userData = userDoc.data();
       const sponsorUID = userData?.sponsorUID;
 
-      // Process referral/re-topup income
+      // Process referral income for sponsor (if exists)
       if (sponsorUID) {
-        if (isReTopup) {
-          await this.processReTopupIncome(activatorUID, sponsorUID, activationAmount, transactionId, rank);
-        } else {
-          await this.processReferralIncome(activatorUID, sponsorUID, activationAmount, transactionId, rank);
-        }
+        await this.processReferralIncome(
+          activatorUID,
+          sponsorUID,
+          activationAmount,
+          transactionId,
+          rank
+        );
       }
 
-      // Process level income
-      await this.processLevelIncome(activatorUID, activationAmount, transactionId, rank);
+      // Process level income for upline (if exists)
+      if (sponsorUID) {
+        await this.processLevelIncome(
+          activatorUID,
+          activationAmount,
+          transactionId,
+          rank
+        );
+      }
 
-      // Process global income (if eligible)
-      await this.processGlobalIncome(activatorUID, activationAmount, transactionId, rank);
+      // Process global income - NEW: Direct pool generation only
+      await this.processGlobalIncome(
+        activatorUID,
+        activationAmount,
+        transactionId,
+        rank
+      );
 
       await logger.info(
         LogCategory.MLM,
         'All incomes processed successfully',
         activatorUID,
-        { 
-          activationAmount, 
-          transactionId, 
-          rank, 
-          isReTopup,
-          sponsorUID 
-        }
+        { activationAmount, transactionId, rank }
       );
 
     } catch (error) {
@@ -684,7 +533,7 @@ export class IncomeEngine {
         'Failed to process all incomes',
         error as Error,
         activatorUID,
-        { activationAmount, transactionId, rank, isReTopup }
+        { activationAmount, transactionId, rank }
       );
       throw error;
     }
@@ -728,6 +577,47 @@ export class IncomeEngine {
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
     });
+  }
+
+  /**
+   * Update user's locked balance
+   */
+  private async updateUserLockedBalance(
+    userUID: string,
+    amount: number,
+    operation: 'add' | 'subtract'
+  ): Promise<void> {
+    const userRef = this.db.collection(collections.USERS).doc(userUID);
+    
+    await this.db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      
+      if (!userDoc.exists) {
+        throw new Error(`User ${userUID} not found`);
+      }
+
+      const userData = userDoc.data();
+      const currentLockedBalance = userData?.lockedBalance || 0;
+      
+      let newLockedBalance: number;
+      if (operation === 'add') {
+        newLockedBalance = safeAdd(currentLockedBalance, amount);
+      } else {
+        newLockedBalance = Math.max(0, currentLockedBalance - amount);
+      }
+
+      transaction.update(userRef, {
+        lockedBalance: roundToTwoDecimals(newLockedBalance),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
+
+    await logger.info(
+      LogCategory.MLM,
+      `User locked balance ${operation}ed`,
+      userUID,
+      { amount, operation }
+    );
   }
 
   /**

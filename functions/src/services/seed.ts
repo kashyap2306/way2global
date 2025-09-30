@@ -93,7 +93,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: false,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 0,
@@ -112,7 +112,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 2,
@@ -131,7 +131,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 4,
@@ -150,7 +150,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 6,
@@ -169,7 +169,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 8,
@@ -188,7 +188,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 10,
@@ -207,7 +207,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 12,
@@ -226,7 +226,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 14,
@@ -245,7 +245,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 16,
@@ -264,7 +264,7 @@ export class SeedService {
             referralIncome: true,
             levelIncome: true,
             globalIncome: true,
-            retopupIncome: true
+            retopupIncome: false // Re-topup system removed
           },
           requirements: {
             directReferrals: 18,
@@ -355,7 +355,7 @@ export class SeedService {
             referral: mlmConfig.incomes.referral,
             level: mlmConfig.incomes.level,
             global: mlmConfig.incomes.global,
-            retopup: mlmConfig.incomes.referral // Same as referral
+            retopup: { percentage: 0, enabled: false } // Re-topup system removed
           },
           isActive: true,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -368,8 +368,8 @@ export class SeedService {
             cycleSize: mlmConfig.incomes.global.cycleSize,
             levels: mlmConfig.incomes.global.levels,
             percentage: mlmConfig.incomes.global.percentage,
-            autoTopupEnabled: mlmConfig.globalCycle.autoTopupEnabled,
-            reidGenerationEnabled: mlmConfig.globalCycle.reidGenerationEnabled
+            autoTopupEnabled: false, // Removed from config
+            reidGenerationEnabled: mlmConfig.globalCycle.reIdGeneration
           },
           isActive: true,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -737,17 +737,17 @@ export class SeedService {
       await logger.warn(LogCategory.SYSTEM, 'Clearing all data - this is destructive!');
 
       const collectionsToClean = [
-        collections.USERS,
-        collections.TRANSACTIONS,
-        collections.INCOMES,
-        collections.RANKS,
-        collections.INCOME_TRANSACTIONS,
-        collections.WITHDRAWALS,
-        collections.REIDS,
-        collections.SETTINGS,
-        collections.PAYOUT_QUEUE,
-        collections.GLOBAL_CYCLES
-      ];
+         collections.USERS,
+         collections.TRANSACTIONS,
+         collections.INCOMES,
+         collections.RANKS,
+         collections.INCOME_TRANSACTIONS,
+         collections.WITHDRAWALS,
+         collections.INCOME_POOLS, // Changed from REIDS to INCOME_POOLS
+         collections.SETTINGS,
+         collections.PAYOUT_QUEUE,
+         collections.GLOBAL_CYCLES
+       ];
 
       for (const collectionName of collectionsToClean) {
         const snapshot = await this.db.collection(collectionName).get();

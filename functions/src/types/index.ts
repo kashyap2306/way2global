@@ -17,10 +17,12 @@ export enum UserStatus {
 
 export enum TransactionType {
   ACTIVATION = 'activation',
-  AUTO_TOPUP = 'auto_topup',
+  REFERRAL = 'referral',
+  LEVEL = 'level',
+  GLOBAL = 'global',
   WITHDRAWAL = 'withdrawal',
   DEPOSIT = 'deposit',
-  TRANSFER = 'transfer'
+  ADMIN_ADJUSTMENT = 'admin_adjustment'
 }
 
 export enum TransactionStatus {
@@ -40,8 +42,7 @@ export enum PaymentMethod {
 export enum IncomeType {
   REFERRAL = 'referral',
   LEVEL = 'level',
-  GLOBAL = 'global',
-  RE_TOPUP = 're_topup'
+  GLOBAL = 'global'
 }
 
 export enum WithdrawalStatus {
@@ -70,6 +71,36 @@ export enum LogCategory {
   WITHDRAWAL = 'withdrawal',
   SYSTEM = 'system',
   ERROR = 'error'
+}
+
+// ============================================================================
+// INCOME POOL INTERFACES
+// ============================================================================
+
+export interface IncomePool {
+  id: string;
+  rank: string;
+  userId: string;
+  poolIncome: number;
+  isLocked: boolean;
+  canClaim: boolean;
+  directReferralsCount: number;
+  requiredDirectReferrals: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  claimedAt?: Timestamp;
+}
+
+export interface PlatformSettings {
+  id: string;
+  directReferralRequirement: number;
+  maintenanceMode: boolean;
+  registrationOpen: boolean;
+  welcomeBonus: number;
+  maxRankLevel: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  updatedBy?: string;
 }
 
 // ============================================================================
@@ -102,9 +133,9 @@ export interface User {
   rightBV: number;
   totalBV: number;
   
-  // Balances
+  // Wallet Balances
   availableBalance: number;
-  pendingBalance: number;
+  lockedBalance: number;
   totalEarnings: number;
   totalWithdrawn: number;
   
@@ -113,11 +144,17 @@ export interface User {
   teamSize: number;
   totalIncome: number;
   
-  // Settings
-  autoTopup: boolean;
-  notifications: boolean;
+  // Rank Status
+  rankActivations: {
+    [rankName: string]: {
+      isActive: boolean;
+      activatedAt?: Timestamp;
+      poolIncome: number;
+      canClaim: boolean;
+    };
+  };
   
-  // Metadata
+  // Timestamps
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -149,11 +186,6 @@ export interface UserProfile {
     language: string;
     timezone: string;
     currency: string;
-    notifications: {
-      email: boolean;
-      sms: boolean;
-      push: boolean;
-    };
   };
   updatedAt: Timestamp;
 }
@@ -176,12 +208,7 @@ export interface Rank {
     referralBonus: number;
     levelBonus: number[];
     globalPoolShare: number;
-    reTopupBonus: number;
-  };
-  autoTopup: {
-    enabled: boolean;
-    amount: number;
-    maxCycles: number;
+    maxPoolIncome: number;
   };
   isActive: boolean;
   createdAt: Timestamp;
@@ -351,7 +378,6 @@ export interface SystemSettings {
     referralBonus: number;
     levelBonuses: number[];
     globalPoolPercentage: number;
-    reTopupBonus: number;
   };
   globalCycle: {
     participantLimit: number;
@@ -359,7 +385,8 @@ export interface SystemSettings {
     autoProcessing: boolean;
     processingInterval: number;
   };
-  system: {
+  platform: {
+    directReferralRequirement: number;
     maintenanceMode: boolean;
     registrationOpen: boolean;
     welcomeBonus: number;

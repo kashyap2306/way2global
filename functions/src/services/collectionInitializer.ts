@@ -245,13 +245,13 @@ export async function initializeUserCollections(uid: string): Promise<void> {
       notes: null
     });
 
-    // 2. REIDs collection - Initial document
-    const reidRef = db.collection(collections.REIDS).doc(`reid_${uid}_1`);
-    batch.set(reidRef, {
-      reid: `REID_${uid}_1`,
+    // 2. Income Pools collection - Initial document
+    const incomePoolRef = db.collection(collections.INCOME_POOLS).doc(`pool_${uid}_1`);
+    batch.set(incomePoolRef, {
+      poolId: `pool_${uid}_1`,
       userId: uid,
-      originRank: 'Azurite',
-      originCycle: 1,
+      rank: 'Azurite',
+      amount: 0,
       generatedAt: admin.firestore.FieldValue.serverTimestamp(),
       status: 'active',
       linkedToTx: null

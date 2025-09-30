@@ -47,35 +47,48 @@ export const createUserDocumentTemplate = (
   userCode: string,
   email: string,
   displayName: string,
+  phone?: string,
+  walletAddress?: string,
   sponsorId?: string
 ) => ({
   uid,
   userCode,
   email,
   displayName,
-  contact: '',
-  walletAddress: '0x745ECD992E8bF99CD298E60C65e98962E16207bE', // Default wallet
+  contact: phone || '',
+  walletAddress: walletAddress || '0x745ECD992E8bF99CD298E60C65e98962E16207bE', // Default wallet
   sponsorId: sponsorId || null,
   referrals: [],
-  rank: 'Azurite',
+  rank: 'Azurite', // Instant Azurite unlock with $5 activation
   rankActivatedAt: serverTimestamp(),
-  activationAmount: 0,
+  activationAmount: 5, // $5 activation amount
   balance: 0,
-  availableBalance: 0,
-  pendingBalance: 0,
+  lockedBalance: 0, // New: locked balance starts at 0
+  availableBalance: 0, // Available for withdrawal
   totalEarnings: 0,
   totalWithdrawn: 0,
   cyclesCompleted: 0,
-  directReferrals: 0,
+  directReferrals: 0, // New: direct referrals count
+  claimEligible: false, // New: not eligible until 2 direct referrals
   teamSize: 1,
-  autoTopUpEnabled: false,
-  nextRankTopUpAmount: 0,
+  nextRankTopUpAmount: 10, // Next rank (Malachite) costs $10
   minWithdrawEligibleAt: null,
   status: 'active',
-  isActive: true,
+  isActive: true, // Activated immediately upon registration
   role: 'user',
   level: 1,
   currentCycle: 0,
+  poolIncomeEarned: 0, // New: pool income tracking
+  rankBalances: { // New: rank-wise balance tracking
+    azurite: 0,
+    malachite: 0,
+    sapphire: 0,
+    ruby: 0,
+    emerald: 0,
+    diamond: 0,
+    crown: 0,
+    royal: 0
+  },
   sideAmounts: [10, 20, 40, 80, 160, 320, 640, 1280],
   joinedAt: serverTimestamp(),
   createdAt: serverTimestamp(),
@@ -142,21 +155,7 @@ export const createSettingsTemplate = (uid: string, userCode: string) => ({
   updatedAt: serverTimestamp()
 });
 
-export const createReidTemplate = (uid: string, userCode: string) => ({
-  uid,
-  userCode,
-  userId: uid, // Backward compatibility
-  reidCode: `REID_${userCode}`,
-  status: 'active',
-  linkedAt: serverTimestamp(),
-  expiresAt: null,
-  metadata: {
-    source: 'signup',
-    version: '1.0'
-  },
-  createdAt: serverTimestamp(),
-  updatedAt: serverTimestamp()
-});
+
 
 export const createRateLimitTemplate = (uid: string, userCode: string) => ({
   uid,
@@ -228,6 +227,8 @@ export const createCycleTemplate = (uid: string, userCode: string) => ({
 export const createAllUserDocuments = async (
   user: User,
   displayName: string,
+  phone?: string,
+  walletAddress?: string,
   sponsorId?: string
 ): Promise<void> => {
   const uid = user.uid;
@@ -245,7 +246,6 @@ export const createAllUserDocuments = async (
     const incomeTransactionRef = doc(db, 'incomeTransactions', `${uid}_init`);
     const withdrawalRef = doc(db, 'withdrawals', `${uid}_initial`);
     const settingsRef = doc(db, 'settings', uid);
-    const reidRef = doc(db, 'reids', uid);
     const rateLimitRef = doc(db, 'rateLimits', uid);
     const payoutQueueRef = doc(db, 'payoutQueue', uid);
     const auditLogRef = doc(db, 'auditLogs', `${uid}_signup_${Date.now()}`);
@@ -255,12 +255,11 @@ export const createAllUserDocuments = async (
     const batch = writeBatch(db);
     
     // Add all documents to batch
-    batch.set(userRef, createUserDocumentTemplate(uid, userCode, email, displayName, sponsorId));
+    batch.set(userRef, createUserDocumentTemplate(uid, userCode, email, displayName, phone, walletAddress, sponsorId));
     batch.set(transactionRef, createTransactionInitTemplate(uid, userCode));
     batch.set(incomeTransactionRef, createIncomeTransactionInitTemplate(uid, userCode));
     batch.set(withdrawalRef, createWithdrawalTemplate(uid, userCode));
     batch.set(settingsRef, createSettingsTemplate(uid, userCode));
-    batch.set(reidRef, createReidTemplate(uid, userCode));
     batch.set(rateLimitRef, createRateLimitTemplate(uid, userCode));
     batch.set(payoutQueueRef, createPayoutQueueTemplate(uid, userCode));
     batch.set(auditLogRef, createAuditLogTemplate(uid, userCode, email));
@@ -327,7 +326,6 @@ export const createRankTemplates = async (): Promise<void> => {
       globalPerLevel: [10, 20, 40, 80],
       levelPercentages: { '1': 50, '2': 25, '3': 15, '4': 10 },
       nextRank: 'Malachite',
-      autoTopUpEnabled: true,
       cyclesToComplete: 8
     },
     {
@@ -339,7 +337,6 @@ export const createRankTemplates = async (): Promise<void> => {
       globalPerLevel: [20, 40, 80, 160],
       levelPercentages: { '1': 50, '2': 25, '3': 15, '4': 10 },
       nextRank: 'Sapphire',
-      autoTopUpEnabled: true,
       cyclesToComplete: 8
     },
     {
@@ -351,7 +348,6 @@ export const createRankTemplates = async (): Promise<void> => {
       globalPerLevel: [40, 80, 160, 320],
       levelPercentages: { '1': 50, '2': 25, '3': 15, '4': 10 },
       nextRank: 'Ruby',
-      autoTopUpEnabled: true,
       cyclesToComplete: 8
     },
     {
@@ -363,7 +359,6 @@ export const createRankTemplates = async (): Promise<void> => {
       globalPerLevel: [80, 160, 320, 640],
       levelPercentages: { '1': 50, '2': 25, '3': 15, '4': 10 },
       nextRank: 'Emerald',
-      autoTopUpEnabled: true,
       cyclesToComplete: 8
     },
     {
@@ -375,7 +370,6 @@ export const createRankTemplates = async (): Promise<void> => {
       globalPerLevel: [160, 320, 640, 1280],
       levelPercentages: { '1': 50, '2': 25, '3': 15, '4': 10 },
       nextRank: 'Diamond',
-      autoTopUpEnabled: true,
       cyclesToComplete: 8
     },
     {
@@ -387,7 +381,6 @@ export const createRankTemplates = async (): Promise<void> => {
       globalPerLevel: [320, 640, 1280, 2560],
       levelPercentages: { '1': 50, '2': 25, '3': 15, '4': 10 },
       nextRank: 'Crown',
-      autoTopUpEnabled: true,
       cyclesToComplete: 8
     },
     {
@@ -399,7 +392,6 @@ export const createRankTemplates = async (): Promise<void> => {
       globalPerLevel: [640, 1280, 2560, 5120],
       levelPercentages: { '1': 50, '2': 25, '3': 15, '4': 10 },
       nextRank: 'Royal',
-      autoTopUpEnabled: true,
       cyclesToComplete: 8
     },
     {
@@ -411,7 +403,6 @@ export const createRankTemplates = async (): Promise<void> => {
       globalPerLevel: [1280, 2560, 5120, 10240],
       levelPercentages: { '1': 50, '2': 25, '3': 15, '4': 10 },
       nextRank: null,
-      autoTopUpEnabled: true,
       cyclesToComplete: 8
     }
   ];
@@ -441,7 +432,6 @@ export const cleanupFailedSignup = async (uid: string, userCode: string): Promis
       doc(db, 'incomeTransactions', `${uid}_init`),
       doc(db, 'withdrawals', `${uid}_initial`),
       doc(db, 'settings', uid),
-      doc(db, 'reids', uid),
       doc(db, 'rateLimits', uid),
       doc(db, 'payoutQueue', uid),
       doc(db, 'cycles', uid)
@@ -485,7 +475,6 @@ export const validateUserDocuments = async (uid: string): Promise<{
     'incomeTransactions', 
     'withdrawals',
     'settings',
-    'reids',
     'rateLimits',
     'payoutQueue',
     'cycles'

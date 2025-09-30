@@ -316,26 +316,7 @@ const LevelIncomePage: React.FC = () => {
         </div>
 
         {/* Level Percentages Info */}
-        <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-6 shadow-md">
-          <h3 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-            <InformationCircleIcon className="h-5 w-5 text-blue-400" />
-            Level Income Structure
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {Object.entries(levelPercentages).map(([level, percentage]) => (
-              <div key={level} className="bg-slate-600 rounded-lg p-3 text-center">
-                <div className="text-slate-300 text-sm">Level {level}</div>
-                <div className="text-white font-bold text-lg">{percentage}%</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 p-4 bg-blue-900/30 rounded-lg border border-blue-500/30">
-            <p className="text-blue-200 text-sm">
-              <strong>How it works:</strong> When your referrals make topups or activations, you earn income based on their level in your team. 
-              Level 1 (direct referrals) gives you 5%, Level 2 gives 4%, and so on down to Level 10.
-            </p>
-          </div>
-        </div>
+
         <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-6 shadow-md space-y-4">
           {/* Tabs */}
           <div className="flex flex-wrap gap-2">

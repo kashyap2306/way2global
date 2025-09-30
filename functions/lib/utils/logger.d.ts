@@ -15,7 +15,9 @@ export declare enum LogCategory {
     SECURITY = "security",
     SYSTEM = "system",
     API = "api",
-    DATABASE = "database"
+    DATABASE = "database",
+    ADMIN = "admin",
+    INCOME = "income"
 }
 declare class Logger {
     private functionName;

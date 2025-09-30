@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, User, Mail, Phone, Lock, Wallet, Users, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import AnimatedCheck from '../components/AnimatedCheck';
 
@@ -17,6 +17,7 @@ interface SignupFormData {
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
+  const { signup } = useAuth();
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState<SignupFormData>({
     fullName: '',
@@ -146,31 +147,23 @@ const Signup: React.FC = () => {
     setErrors({});
 
     try {
-      const functions = getFunctions();
-      const signupFunction = httpsCallable(functions, 'signup');
+      // Use AuthContext signup function
+      const user = await signup(
+        formData.email,
+        formData.password,
+        formData.fullName,
+        formData.phone,
+        formData.walletAddress,
+        formData.sponsorId || undefined
+      );
       
-      const result = await signupFunction({
-        email: formData.email,
-        password: formData.password,
-        displayName: formData.fullName,
-        phone: formData.phone,
-        walletAddress: formData.walletAddress,
-        sponsorId: formData.sponsorId || undefined
-      });
-
-      const data = result.data as any;
+      // Store the user ID for navigation
+      setSignupUserId(user.uid);
       
-      if (data.success) {
-        // Store the user ID for navigation
-        setSignupUserId(data.uid);
-        
-        // Show success animation
-        setShowSuccess(true);
-        
-        toast.success('Account created successfully! Welcome to Way2Globel!');
-      } else {
-        throw new Error(data.message || 'Signup failed');
-      }
+      // Show success animation
+      setShowSuccess(true);
+      
+      toast.success('Account created successfully! Welcome to Way2Globel!');
       
     } catch (error: any) {
       console.error('Signup error:', error);

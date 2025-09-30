@@ -26,6 +26,15 @@ interface DashboardStats {
   totalIncomeDistributed: number;
 }
 
+interface RecentActivity {
+  id: string;
+  user: string;
+  action: string;
+  amount: string;
+  time: string;
+  status: string;
+}
+
 const AdminDashboard: React.FC = () => {
   const { userData } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
@@ -38,10 +47,12 @@ const AdminDashboard: React.FC = () => {
     pendingTopups: 0,
     totalIncomeDistributed: 0
   });
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardStats();
+    fetchRecentActivity();
   }, []);
 
   const fetchDashboardStats = async () => {
@@ -54,6 +65,87 @@ const AdminDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchRecentActivity = async () => {
+    try {
+      // Mock recent activity data since audit logs are removed
+      const activities: RecentActivity[] = [
+        {
+          id: 'activity-1',
+          user: 'System',
+          action: 'User registration',
+          amount: null,
+          time: '2 minutes ago',
+          status: 'completed',
+          link: '/admin/users'
+        },
+        {
+          id: 'activity-2', 
+          user: 'Admin',
+          action: 'Withdrawal approved',
+          amount: '$500',
+          time: '15 minutes ago',
+          status: 'completed',
+          link: '/admin/withdrawals'
+        }
+      ];
+      
+      setRecentActivity(activities);
+    } catch (error) {
+      console.error('Error fetching recent activity:', error);
+      // Fallback to empty array if there's an error
+      setRecentActivity([]);
+    }
+  };
+
+  const getTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} days ago`;
+  };
+
+  const formatActionText = (action: string): string => {
+    const actionMap: Record<string, string> = {
+      'user_suspended': 'User Suspended',
+      'user_reactivated': 'User Reactivated',
+      'user_updated': 'User Profile Updated',
+      'withdrawal_approved': 'Withdrawal Approved',
+      'withdrawal_rejected': 'Withdrawal Rejected',
+      'topup_approved': 'Topup Approved',
+      'topup_rejected': 'Topup Rejected',
+      'settings_updated': 'Settings Updated',
+      'user_balance_updated': 'Balance Updated',
+      'user_rank_updated': 'Rank Updated',
+      'admin_login': 'Admin Login',
+      'admin_logout': 'Admin Logout',
+      'bulk_action_performed': 'Bulk Action'
+    };
+    return actionMap[action] || action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const getActivityStatus = (action: string): string => {
+    if (action.includes('approved') || action.includes('reactivated')) return 'completed';
+    if (action.includes('rejected') || action.includes('suspended')) return 'rejected';
+    if (action.includes('pending')) return 'pending';
+    return 'active';
+  };
+
+  const getActivityAmount = (details: any): string => {
+    if (details && typeof details === 'object') {
+      if (details.amount) return `$${details.amount}`;
+      if (details.after && details.after.amount) return `$${details.after.amount}`;
+      if (details.before && details.before.amount) return `$${details.before.amount}`;
+    }
+    return '-';
   };
 
   const statCards = [
@@ -109,16 +201,8 @@ const AdminDashboard: React.FC = () => {
       changeType: 'increase',
       icon: ChartBarIcon,
       color: 'from-teal-500 to-teal-600',
-      link: '/admin/audit'
+      link: '/admin/global-income'
     }
-  ];
-
-  const recentActivity = [
-    { id: 1, user: 'John Doe', action: 'Withdrawal Request', amount: '$500', time: '2 minutes ago', status: 'pending' },
-    { id: 2, user: 'Jane Smith', action: 'Topup Request', amount: '$200', time: '5 minutes ago', status: 'approved' },
-    { id: 3, user: 'Mike Johnson', action: 'Support Ticket', amount: '-', time: '10 minutes ago', status: 'open' },
-    { id: 4, user: 'Sarah Wilson', action: 'Account Created', amount: '-', time: '15 minutes ago', status: 'active' },
-    { id: 5, user: 'David Brown', action: 'Withdrawal Approved', amount: '$750', time: '20 minutes ago', status: 'completed' }
   ];
 
   const quickActions = [
@@ -198,19 +282,33 @@ const AdminDashboard: React.FC = () => {
         {/* Recent Activity */}
         <div className="lg:col-span-2 bg-black/20 backdrop-blur-sm border border-white/10 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
-            <Link to="/admin/audit" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+          <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={fetchRecentActivity}
+              className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              Refresh
+            </button>
+            <Link to="/admin/global-income" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
               View all
             </Link>
           </div>
-          
-          <div className="space-y-4">
-            {recentActivity.map((activity) => (
+        </div>
+        
+        <div className="space-y-4">
+          {recentActivity.length === 0 ? (
+            <div className="text-center py-8">
+              <ClockIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-400">No recent activity found</p>
+            </div>
+          ) : (
+            recentActivity.map((activity) => (
               <div key={activity.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-b-0">
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-medium">
-                      {activity.user.split(' ').map(n => n[0]).join('')}
+                      {activity.user.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </span>
                   </div>
                   <div>
@@ -225,6 +323,7 @@ const AdminDashboard: React.FC = () => {
                       activity.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
                       activity.status === 'approved' || activity.status === 'completed' ? 'bg-green-500/20 text-green-300' :
                       activity.status === 'active' ? 'bg-blue-500/20 text-blue-300' :
+                      activity.status === 'rejected' ? 'bg-red-500/20 text-red-300' :
                       'bg-orange-500/20 text-orange-300'
                     }`}>
                       {activity.status}
@@ -233,8 +332,9 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            ))
+          )}
+        </div>
         </div>
 
         {/* Quick Actions & Alerts */}

@@ -70,7 +70,7 @@ const TestNewSystem: React.FC = () => {
       <div className="text-center">
         <h2 className="text-3xl font-bold text-white mb-4">New MLM System Overview</h2>
         <p className="text-gray-300 text-lg">
-          User-centric, pool-based income system without Re-ID and Auto TopUp
+          User-centric, pool-based income system with simplified structure
         </p>
       </div>
 
@@ -78,20 +78,20 @@ const TestNewSystem: React.FC = () => {
         <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl p-6">
           <div className="flex items-center space-x-3 mb-4">
             <CheckCircleIcon className="w-8 h-8 text-green-400" />
-            <h3 className="text-lg font-semibold text-white">Re-ID Removed</h3>
+            <h3 className="text-lg font-semibold text-white">Simplified System</h3>
           </div>
           <p className="text-gray-300 text-sm">
-            Eliminated complex Re-ID generation and management system
+            Streamlined pool-based income distribution system
           </p>
         </div>
 
         <div className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-xl p-6">
           <div className="flex items-center space-x-3 mb-4">
             <CheckCircleIcon className="w-8 h-8 text-green-400" />
-            <h3 className="text-lg font-semibold text-white">Auto TopUp Removed</h3>
+            <h3 className="text-lg font-semibold text-white">Pool-Based Income</h3>
           </div>
           <p className="text-gray-300 text-sm">
-            Simplified system without automatic top-up mechanisms
+            Direct pool income distribution without complex mechanisms
           </p>
         </div>
 
@@ -322,12 +322,11 @@ const TestNewSystem: React.FC = () => {
         <h4 className="text-lg font-semibold text-blue-300 mb-3">System Changes Summary</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
-            <h5 className="font-medium text-white mb-2">Removed Features:</h5>
+            <h5 className="font-medium text-white mb-2">Legacy Features Removed:</h5>
             <ul className="text-blue-200 space-y-1">
-              <li>• Re-ID generation and management</li>
-              <li>• Auto TopUp mechanisms</li>
               <li>• Complex MLM tree structures</li>
-              <li>• Re-topup income calculations</li>
+              <li>• Multi-level income calculations</li>
+              <li>• Complex eligibility requirements</li>
             </ul>
           </div>
           <div>

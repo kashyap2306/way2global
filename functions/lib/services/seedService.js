@@ -74,7 +74,7 @@ class SeedService {
                         referralIncome: 0,
                         levelIncome: 0,
                         globalIncome: 0,
-                        retopupIncome: 0,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 0
                     },
                     requirements: {
@@ -93,7 +93,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 1000
                     },
                     requirements: {
@@ -112,7 +112,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 2500
                     },
                     requirements: {
@@ -131,7 +131,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 5000
                     },
                     requirements: {
@@ -150,7 +150,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 10000
                     },
                     requirements: {
@@ -169,7 +169,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 25000
                     },
                     requirements: {
@@ -188,7 +188,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 50000
                     },
                     requirements: {
@@ -207,7 +207,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 100000
                     },
                     requirements: {
@@ -226,7 +226,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 250000
                     },
                     requirements: {
@@ -245,7 +245,7 @@ class SeedService {
                         referralIncome: config_1.mlmConfig.incomes.referral.percentage,
                         levelIncome: config_1.mlmConfig.incomes.level.L1, // Using L1 level income
                         globalIncome: config_1.mlmConfig.incomes.global.percentage,
-                        retopupIncome: config_1.mlmConfig.incomes.reTopup.percentage,
+                        retopupIncome: 0, // Re-topup system removed
                         maxWithdrawal: 500000
                     },
                     requirements: {
@@ -305,15 +305,15 @@ class SeedService {
                         enabled: true
                     },
                     retopup: {
-                        percentage: config_1.mlmConfig.incomes.reTopup.percentage,
-                        enabled: true
+                        percentage: 0, // Re-topup system removed
+                        enabled: false
                     }
                 },
                 globalCycle: {
                     targetAmount: config_1.mlmConfig.globalCycle.targetAmount,
                     triggerInterval: config_1.mlmConfig.globalCycle.triggerInterval,
-                    autoTopupEnabled: config_1.mlmConfig.globalCycle.autoTopupEnabled,
-                    reidGenerationEnabled: config_1.mlmConfig.globalCycle.reidGenerationEnabled,
+                    autoTopupEnabled: false, // Removed from config
+                    reIdGeneration: config_1.mlmConfig.globalCycle.reIdGeneration,
                     enabled: true
                 },
                 system: {
@@ -592,7 +592,7 @@ class SeedService {
                 transactionCount++;
                 // Create some income records
                 if (user.totalEarnings > 0) {
-                    const incomeTypes = ['referral', 'level', 'global', 'retopup'];
+                    const incomeTypes = ['referral', 'level', 'global']; // Removed 'retopup'
                     const incomePerType = user.totalEarnings / incomeTypes.length;
                     incomeTypes.forEach(type => {
                         const incomeRef = admin.firestore().collection(config_1.collections.INCOMES).doc();

@@ -11,7 +11,10 @@ export { claimPayout } from './callable/claimPayout';
 export { seedDatabase } from './callable/seedDatabase';
 export { onUserCreated } from './triggers/onUserCreated';
 export { onActivationTxCreated } from './triggers/onActivationTxCreated';
-export { scheduledGlobalCycle } from './triggers/scheduledGlobalCycle';
+export { autoPoolIncomeGenerator, manualPoolIncomeGeneration } from './triggers/autoPoolIncomeGenerator';
+export { claimLockedIncome } from './api/claimLockedIncome';
+export { activateRank, activateRankHttp } from './api/activateRank';
+export { getPlatformSettings, updatePlatformSettings, getPlatformSettingsHttp, updatePlatformSettingsHttp } from './api/platformSettings';
 export declare const healthCheck: functions.HttpsFunction;
 export declare const corsHandler: functions.HttpsFunction;
 //# sourceMappingURL=index.d.ts.map

@@ -20,14 +20,16 @@ import {
 
 interface WalletData {
   availableBalance: number;
-  incomeWalletBalance: number;
-  topupWalletBalance: number;
-  totalDeposits: number;
-  totalWithdrawals: number;
+  lockedBalance: number;
   totalEarnings: number;
-  thisMonthDeposits: number;
-  thisMonthWithdrawals: number;
+  totalWithdrawals: number;
+  poolIncomeEarned: number;
+  directReferrals: number;
+  claimEligible: boolean;
+  rankBalances: { [rank: string]: number };
   thisMonthEarnings: number;
+  thisMonthWithdrawals: number;
+  claimableIncome: number;
 }
 
 interface Transaction {
@@ -36,6 +38,8 @@ interface Transaction {
   type: string;
   status: string;
   createdAt: Timestamp;
+  claimable?: boolean;
+  claimed?: boolean;
 }
 
 const WalletPage: React.FC = () => {
@@ -43,14 +47,16 @@ const WalletPage: React.FC = () => {
   const navigate = useNavigate();
   const [walletData, setWalletData] = useState<WalletData>({
     availableBalance: 0,
-    incomeWalletBalance: 0,
-    topupWalletBalance: 0,
-    totalDeposits: 0,
-    totalWithdrawals: 0,
+    lockedBalance: 0,
     totalEarnings: 0,
-    thisMonthDeposits: 0,
-    thisMonthWithdrawals: 0,
+    totalWithdrawals: 0,
+    poolIncomeEarned: 0,
+    directReferrals: 0,
+    claimEligible: false,
+    rankBalances: {},
     thisMonthEarnings: 0,
+    thisMonthWithdrawals: 0,
+    claimableIncome: 0,
   });
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +88,21 @@ const WalletPage: React.FC = () => {
     navigate('/withdrawal');
   };
 
+  // Handle claim income button click
+  const handleClaimIncome = async () => {
+    if (!userData?.uid) return;
+
+    try {
+      // Import the claimIncome function from firestoreService
+      const { claimIncome } = await import('../services/firestoreService');
+      await claimIncome(userData.uid);
+      alert('Income claimed successfully!');
+    } catch (error) {
+      console.error('Error claiming income:', error);
+      alert('Failed to claim income. Please try again.');
+    }
+  };
+
   // Set up real-time listeners for wallet data
   useEffect(() => {
     if (!userData?.uid) {
@@ -91,7 +112,7 @@ const WalletPage: React.FC = () => {
 
     const unsubscribers: (() => void)[] = [];
 
-    // Listen to user document for availableBalance
+    // Listen to user document for balance and referral data
     const userUnsubscribe = onSnapshot(
       doc(db, 'users', userData.uid),
       (doc) => {
@@ -99,7 +120,13 @@ const WalletPage: React.FC = () => {
           const data = doc.data();
           setWalletData(prev => ({
             ...prev,
-            availableBalance: data.availableBalance || 0
+            availableBalance: data.availableBalance || 0,
+            lockedBalance: data.lockedBalance || 0,
+            totalEarnings: data.totalEarnings || 0,
+            poolIncomeEarned: data.poolIncomeEarned || 0,
+            directReferrals: data.directReferrals || 0,
+            claimEligible: data.claimEligible || false,
+            rankBalances: data.rankBalances || {}
           }));
         }
       },
@@ -107,21 +134,26 @@ const WalletPage: React.FC = () => {
     );
     unsubscribers.push(userUnsubscribe);
 
-    // Listen to incomeTransactions for income wallet balance
+    // Listen to incomeTransactions for pool and referral income
     const incomeUnsubscribe = onSnapshot(
       query(
-        collection(db, 'users', userData.uid, 'incomeTransactions'),
-        where('type', '!=', 'init')
+        collection(db, 'incomeTransactions'),
+        where('uid', '==', userData.uid),
+        where('type', 'in', ['pool', 'referral'])
       ),
       (snapshot) => {
-        let totalIncome = 0;
+        let claimableIncome = 0;
         const { startOfMonth } = getCurrentMonthRange();
         let thisMonthIncome = 0;
 
         snapshot.forEach((doc) => {
           const data = doc.data();
           const amount = data.amount || 0;
-          totalIncome += amount;
+
+          // Count claimable income
+          if (data.claimable && !data.claimed) {
+            claimableIncome += amount;
+          }
 
           // Check if transaction is from this month
           if (data.createdAt && data.createdAt.toDate() >= startOfMonth) {
@@ -131,8 +163,7 @@ const WalletPage: React.FC = () => {
 
         setWalletData(prev => ({
           ...prev,
-          incomeWalletBalance: totalIncome,
-          totalEarnings: totalIncome,
+          claimableIncome,
           thisMonthEarnings: thisMonthIncome
         }));
       },
@@ -140,40 +171,11 @@ const WalletPage: React.FC = () => {
     );
     unsubscribers.push(incomeUnsubscribe);
 
-    // Listen to transactions for topup wallet balance
-    const transactionsUnsubscribe = onSnapshot(
-      collection(db, 'users', userData.uid, 'transactions'),
-      (snapshot) => {
-        let totalDeposits = 0;
-        const { startOfMonth } = getCurrentMonthRange();
-        let thisMonthDeposits = 0;
-
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          const amount = data.amount || 0;
-          totalDeposits += amount;
-
-          // Check if transaction is from this month
-          if (data.createdAt && data.createdAt.toDate() >= startOfMonth) {
-            thisMonthDeposits += amount;
-          }
-        });
-
-        setWalletData(prev => ({
-          ...prev,
-          topupWalletBalance: totalDeposits,
-          totalDeposits: totalDeposits,
-          thisMonthDeposits: thisMonthDeposits
-        }));
-      },
-      (error) => console.error('Error listening to transactions:', error)
-    );
-    unsubscribers.push(transactionsUnsubscribe);
-
     // Listen to withdrawals for withdrawal statistics
     const withdrawalsUnsubscribe = onSnapshot(
       query(
-        collection(db, 'users', userData.uid, 'withdrawals'),
+        collection(db, 'withdrawals'),
+        where('uid', '==', userData.uid),
         where('status', '==', 'approved')
       ),
       (snapshot) => {
@@ -205,7 +207,8 @@ const WalletPage: React.FC = () => {
     // Listen to recent transactions for the table
     const recentTransactionsUnsubscribe = onSnapshot(
       query(
-        collection(db, 'users', userData.uid, 'transactions'),
+        collection(db, 'transactions'),
+        where('uid', '==', userData.uid),
         orderBy('createdAt', 'desc'),
         limit(10)
       ),
@@ -218,7 +221,9 @@ const WalletPage: React.FC = () => {
             amount: data.amount || 0,
             type: data.type || 'deposit',
             status: data.status || 'pending',
-            createdAt: data.createdAt
+            createdAt: data.createdAt,
+            claimable: data.claimable || false,
+            claimed: data.claimed || false
           });
         });
         setRecentTransactions(transactions);
@@ -261,55 +266,114 @@ const WalletPage: React.FC = () => {
           <p className="text-slate-300">Manage your digital assets</p>
         </div>
 
-        {/* Main Balance Card - Digital Wallet Style */}
-        <div className="relative">
-          {/* Background glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl"></div>
-          
-          {/* Main wallet card */}
-          <div className="relative bg-gradient-to-br from-slate-800/90 via-blue-900/90 to-slate-800/90 backdrop-blur-xl rounded-3xl p-8 sm:p-10 border border-white/10 shadow-2xl">
-            {/* Card header with wallet icon */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl">
-                  <WalletIcon className="h-8 w-8 text-white" />
+        {/* Dual Balance Cards - Available and Locked */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Available Balance Card */}
+          <div className="relative">
+            {/* Background glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl"></div>
+            
+            {/* Available balance card */}
+            <div className="relative bg-gradient-to-br from-slate-800/90 via-blue-900/90 to-slate-800/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
+              {/* Card header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
+                    <WalletIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">Available Balance</h2>
+                    <p className="text-slate-400 text-xs">Ready for withdrawal</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-white">Available Balance</h2>
-                  <p className="text-slate-400 text-sm">Ready for withdrawal</p>
-                </div>
-              </div>
-              <div className="text-right">
                 <div className="text-xs text-slate-400 uppercase tracking-wider">USDT</div>
               </div>
-            </div>
 
-            {/* Balance display */}
-            <div className="text-center mb-8">
-              <div className="text-5xl sm:text-6xl font-bold text-white mb-2 tracking-tight">
-                {walletData.availableBalance.toFixed(2)}
-              </div>
-              <div className="text-slate-300 text-lg">USDT</div>
-            </div>
-
-            {/* Withdraw button */}
-            <div className="flex justify-center">
-              <button
-                onClick={handleWithdraw}
-                className="group relative bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-4 px-12 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 active:scale-95"
-              >
-                <div className="flex items-center space-x-3">
-                  <ArrowUpIcon className="h-6 w-6 transform group-hover:translate-y-1 transition-transform" />
-                  <span className="text-lg">Withdraw Funds</span>
+              {/* Balance display */}
+              <div className="text-center mb-6">
+                <div className="text-3xl sm:text-4xl font-bold text-white mb-1 tracking-tight">
+                  {walletData.availableBalance.toFixed(2)}
                 </div>
-                {/* Button glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-emerald-500/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-300"></div>
-              </button>
-            </div>
+                <div className="text-slate-300 text-sm">USDT</div>
+              </div>
 
-            {/* Card decorative elements */}
-            <div className="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-2xl"></div>
-            <div className="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-2xl"></div>
+              {/* Withdraw button */}
+              <div className="flex justify-center">
+                <button
+                  onClick={handleWithdraw}
+                  className="group relative bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                >
+                  <div className="flex items-center space-x-2">
+                    <ArrowUpIcon className="h-5 w-5 transform group-hover:translate-y-1 transition-transform" />
+                    <span>Withdraw</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Decorative elements */}
+              <div className="absolute top-3 right-3 w-12 h-12 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-xl"></div>
+            </div>
+          </div>
+
+          {/* Locked Balance Card */}
+          <div className="relative">
+            {/* Background glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-3xl blur-xl"></div>
+            
+            {/* Locked balance card */}
+            <div className="relative bg-gradient-to-br from-slate-800/90 via-orange-900/90 to-slate-800/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
+              {/* Card header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl">
+                    <WalletIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">Locked Balance</h2>
+                    <p className="text-slate-400 text-xs">Pool income earned</p>
+                  </div>
+                </div>
+                <div className="text-xs text-slate-400 uppercase tracking-wider">USDT</div>
+              </div>
+
+              {/* Balance display */}
+              <div className="text-center mb-6">
+                <div className="text-3xl sm:text-4xl font-bold text-white mb-1 tracking-tight">
+                  {walletData.lockedBalance.toFixed(2)}
+                </div>
+                <div className="text-slate-300 text-sm">USDT</div>
+              </div>
+
+              {/* Claim button - only show if eligible */}
+              <div className="flex justify-center">
+                {walletData.claimEligible && walletData.directReferrals >= 2 ? (
+                  <button
+                    onClick={handleClaimIncome}
+                    className="group relative bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <ArrowDownIcon className="h-5 w-5 transform group-hover:translate-y-1 transition-transform" />
+                      <span>Claim Income</span>
+                    </div>
+                  </button>
+                ) : (
+                  <div className="text-center">
+                    <div className="text-slate-400 text-sm mb-2">
+                      {walletData.directReferrals < 2 
+                        ? `Need ${2 - walletData.directReferrals} more direct referrals`
+                        : 'No claimable income'
+                      }
+                    </div>
+                    <div className="text-slate-500 text-xs">
+                      Direct referrals: {walletData.directReferrals}/2
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Decorative elements */}
+              <div className="absolute top-3 right-3 w-12 h-12 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-full blur-xl"></div>
+            </div>
           </div>
         </div>
 
@@ -320,9 +384,9 @@ const WalletPage: React.FC = () => {
               <div className="p-2 bg-green-500/20 rounded-xl">
                 <ArrowDownIcon className="h-5 w-5 text-green-400" />
               </div>
-              <span className="text-slate-300 text-sm">Total Income</span>
+              <span className="text-slate-300 text-sm">Pool Income Earned</span>
             </div>
-            <div className="text-2xl font-bold text-white">{formatUSDT(walletData.incomeWalletBalance)}</div>
+            <div className="text-2xl font-bold text-white">{formatUSDT(walletData.poolIncomeEarned)}</div>
           </div>
           
           <div className="bg-gradient-to-br from-slate-800/80 to-purple-900/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
@@ -330,9 +394,9 @@ const WalletPage: React.FC = () => {
               <div className="p-2 bg-purple-500/20 rounded-xl">
                 <WalletIcon className="h-5 w-5 text-purple-400" />
               </div>
-              <span className="text-slate-300 text-sm">Topup Balance</span>
+              <span className="text-slate-300 text-sm">Claimable Income</span>
             </div>
-            <div className="text-2xl font-bold text-white">{formatUSDT(walletData.topupWalletBalance)}</div>
+            <div className="text-2xl font-bold text-white">{formatUSDT(walletData.claimableIncome)}</div>
           </div>
           
           <div className="bg-gradient-to-br from-slate-800/80 to-emerald-900/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
@@ -352,8 +416,12 @@ const WalletPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-              <span className="text-slate-300 text-sm sm:text-base">Total Deposits:</span>
-              <span className="font-semibold text-white text-sm sm:text-base">{formatUSDT(walletData.totalDeposits)}</span>
+              <span className="text-slate-300 text-sm sm:text-base">Available Balance:</span>
+              <span className="font-semibold text-white text-sm sm:text-base">{formatUSDT(walletData.availableBalance)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
+              <span className="text-slate-300 text-sm sm:text-base">Locked Balance:</span>
+              <span className="font-semibold text-white text-sm sm:text-base">{formatUSDT(walletData.lockedBalance)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
               <span className="text-slate-300 text-sm sm:text-base">Total Withdrawals:</span>
@@ -366,8 +434,12 @@ const WalletPage: React.FC = () => {
           </div>
           <div className="space-y-4">
             <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-              <span className="text-slate-300 text-sm sm:text-base">This Month Deposits:</span>
-              <span className="font-semibold text-white text-sm sm:text-base">{formatUSDT(walletData.thisMonthDeposits)}</span>
+              <span className="text-slate-300 text-sm sm:text-base">Pool Income Earned:</span>
+              <span className="font-semibold text-white text-sm sm:text-base">{formatUSDT(walletData.poolIncomeEarned)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
+              <span className="text-slate-300 text-sm sm:text-base">Claimable Income:</span>
+              <span className="font-semibold text-white text-sm sm:text-base">{formatUSDT(walletData.claimableIncome)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
               <span className="text-slate-300 text-sm sm:text-base">This Month Withdrawals:</span>

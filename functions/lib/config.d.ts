@@ -142,9 +142,6 @@ export declare const mlmConfig: {
             levels: number;
             cycleSize: number;
         };
-        reTopup: {
-            percentage: number;
-        };
     };
     withdrawal: {
         minimum: number;
@@ -170,9 +167,9 @@ export declare const mlmConfig: {
     globalCycle: {
         triggerInterval: number;
         maxCyclesPerRun: number;
-        autoTopupEnabled: boolean;
-        reidGenerationEnabled: boolean;
         targetAmount: number;
+        processingInterval: number;
+        reIdGeneration: boolean;
     };
     validation: {
         email: {
@@ -200,7 +197,7 @@ export declare const collections: {
     RANKS: string;
     INCOME_TRANSACTIONS: string;
     WITHDRAWALS: string;
-    REIDS: string;
+    INCOME_POOLS: string;
     SETTINGS: string;
     PAYOUT_QUEUE: string;
     SECURITY_LOGS: string;

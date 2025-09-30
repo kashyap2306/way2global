@@ -14,10 +14,6 @@ export declare const calculateLevelIncome: (level: number, activationAmount: num
  */
 export declare const calculateGlobalIncome: (totalAmount: number, level: number, totalLevels?: number) => number;
 /**
- * Calculate re-topup income (same as referral income)
- */
-export declare const calculateReTopupIncome: (activationAmount: number) => number;
-/**
  * Calculate withdrawal deductions based on method
  */
 export declare const calculateWithdrawalDeductions: (amount: number, method: "bank" | "usdt" | "p2p" | "fund") => {

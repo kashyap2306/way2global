@@ -22,7 +22,9 @@ export enum LogCategory {
   SECURITY = 'security',
   SYSTEM = 'system',
   API = 'api',
-  DATABASE = 'database'
+  DATABASE = 'database',
+  ADMIN = 'admin',
+  INCOME = 'income'
 }
 
 interface LogEntry {

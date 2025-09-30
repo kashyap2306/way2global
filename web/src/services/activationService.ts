@@ -131,13 +131,13 @@ export const getUserActivationStatus = async (userId: string): Promise<{
  */
 export const getPackageAmount = (rank: string): number => {
   const packageAmounts: { [key: string]: number } = {
-    'Starter': 5,
-    'Bronze': 25,
-    'Silver': 50,
-    'Gold': 100,
-    'Platinum': 250,
-    'Diamond': 500,
-    'Crown': 1000
+    'Starter': 5,    // ✓ Azurite equivalent
+    'Bronze': 10,    // ✓ Benitoite equivalent (was 25)
+    'Silver': 20,    // ✓ Crystals equivalent (was 50)
+    'Gold': 40,      // ✓ Diamond equivalent (was 100)
+    'Platinum': 80,  // ✓ Emerald equivalent (was 250)
+    'Diamond': 160,  // ✓ Feldspar equivalent (was 500)
+    'Crown': 320     // ✓ Garnet equivalent (was 1000)
   };
   
   return packageAmounts[rank] || 0;

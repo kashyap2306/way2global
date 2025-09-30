@@ -40,12 +40,13 @@ export interface MLMUser {
   rankActivatedAt: Timestamp;
   activationAmount: number;
   balance: number;
-  pendingBalance: number;
+  lockedBalance: number; // New: locked balance per rank
+  availableBalance: number; // Available for withdrawal
   totalEarnings: number;
   totalWithdrawn: number;
-  availableBalance: number;
   cyclesCompleted: number;
-  autoTopUpEnabled: boolean;
+  directReferrals: number; // New: count of direct referrals
+  claimEligible: boolean; // New: eligible to claim based on 2 direct referrals
   nextRankTopUpAmount: number;
   minWithdrawEligibleAt: Timestamp | null;
   status: string;
@@ -56,18 +57,21 @@ export interface MLMUser {
   // Admin fields
   role: 'user' | 'admin' | 'superadmin' | 'moderator';
   isAdmin?: boolean;
-  // Global income fields
-  globalIncomeEarned?: number;
+  // Pool-based income fields
+  poolIncomeEarned?: number; // New: total pool income earned
   currentPool?: string;
   poolPosition?: number;
   poolsCompleted?: number;
-  // Level-wise income tracking
-  levelIncomes?: {
-    level1: number;
-    level2: number;
-    level3: number;
-    level4: number;
-    level5: number;
+  // Rank-wise locked balances
+  rankBalances?: {
+    azurite: number;
+    malachite: number;
+    sapphire: number;
+    ruby: number;
+    emerald: number;
+    diamond: number;
+    crown: number;
+    royal: number;
   };
   // Direct referrals count
   directReferralsCount?: number;
@@ -107,11 +111,8 @@ export interface Rank {
   order: number;
   activationAmount: number;
   investment: number;
-  globalReceivedIncome: number;
-  globalPerLevel: number[];
-  levelPercentages: { [key: string]: number };
+  poolIncome: number; // New: pool income amount for this rank
   nextRank: string | null;
-  autoTopUpEnabled: boolean;
   cyclesToComplete: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -121,14 +122,17 @@ export interface Rank {
 export interface IncomeTransaction {
   itxId: string;
   userId: string;
-  type: 'referral' | 'level' | 'global';
+  type: 'pool' | 'referral'; // Updated: simplified to pool-based and referral only
   amount: number;
   currency: string;
   rank: string;
-  cycle: number;
+  cycle?: number; // Optional for pool income
   sourceUserId: string | null;
   notes: string;
   processedBy: string;
+  claimable: boolean; // New: whether this income can be claimed
+  claimed: boolean; // New: whether this income has been claimed
+  claimedAt?: Timestamp; // New: when it was claimed
   createdAt: Timestamp;
 }
 
@@ -146,25 +150,7 @@ export interface Withdrawal {
   notes?: string;
 }
 
-export interface Reid {
-  id: string;
-  reid: string;
-  userId: string;
-  reidNumber: number;
-  rank: string;
-  originRank: string;
-  originCycle: number;
-  isActive: boolean;
-  activationAmount: number;
-  totalEarnings: number;
-  directReferrals: string[];
-  createdAt: Timestamp;
-  activatedAt?: Timestamp;
-  cycleCompletions: number;
-  generatedAt: Timestamp;
-  status: 'active' | 'used' | 'expired';
-  linkedToTx: string | null;
-}
+
 
 export interface Settings {
   minWithdrawal: number;
@@ -174,7 +160,6 @@ export interface Settings {
   activationCurrency: string;
   referralCommissionPercent: number;
   levelIncomePercentages: { [key: string]: number };
-  autoTopUpEnabled: boolean;
   globalCyclesToRun: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -233,18 +218,30 @@ export const createMLMUser = async (userData: Partial<MLMUser>): Promise<void> =
     rank: 'Azurite',
     activationAmount: 5,
     balance: 0,
-    pendingBalance: 0,
+    lockedBalance: 0, // New: locked balance starts at 0
+    availableBalance: 0, // Available for withdrawal
     totalEarnings: 0,
     totalWithdrawn: 0,
-    availableBalance: 0,
     cyclesCompleted: 0,
-    autoTopUpEnabled: true,
+    directReferrals: 0, // New: direct referrals count
+    claimEligible: false, // New: not eligible until 2 direct referrals
     nextRankTopUpAmount: 10,
     minWithdrawEligibleAt: null,
     status: 'active',
     isActive: false,
     role: userData.role || 'user', // Default role is 'user'
     referrals: [],
+    poolIncomeEarned: 0, // New: pool income tracking
+    rankBalances: { // New: rank-wise balance tracking
+      azurite: 0,
+      malachite: 0,
+      sapphire: 0,
+      ruby: 0,
+      emerald: 0,
+      diamond: 0,
+      crown: 0,
+      royal: 0
+    },
     createdAt: serverTimestamp() as Timestamp,
     updatedAt: serverTimestamp() as Timestamp,
     rankActivatedAt: serverTimestamp() as Timestamp
@@ -459,310 +456,7 @@ export const updateWithdrawalStatus = async (
   await updateDoc(withdrawalRef, updateData);
 };
 
-// REIDs service
-export const createReid = async (reidData: Partial<Reid>): Promise<string> => {
-  const reidsRef = collection(db, 'reids');
-  const rData: Partial<Reid> = {
-    ...reidData,
-    generatedAt: serverTimestamp() as Timestamp
-  };
-  
-  const docRef = await addDoc(reidsRef, rData);
-  return docRef.id;
-};
 
-export const generateReid = async (
-  userId: string, 
-  originRank: string, 
-  originCycle: number
-): Promise<string> => {
-  const reid = `REID_${userId}_${originCycle}`;
-  
-  await createReid({
-    reid,
-    userId,
-    originRank,
-    originCycle,
-    status: 'active',
-    linkedToTx: null
-  });
-  
-  return reid;
-};
-
-// Enhanced REID generation for global cycle completion
-export const generateREIDFromGlobalCycle = async (
-  originalUID: string,
-  rank: string,
-  cycleId: string,
-  parentCycleRank: string
-): Promise<string> => {
-  try {
-    // Get user's current REID count for this rank
-    const userReidsQuery = query(
-      collection(db, 'reids'),
-      where('originalUID', '==', originalUID),
-      where('rank', '==', rank)
-    );
-    const userReidsSnapshot = await getDocs(userReidsQuery);
-    const reidNumber = userReidsSnapshot.size + 1;
-
-    const reidData = {
-      originalUID,
-      reidNumber,
-      rank,
-      isActive: true,
-      activationAmount: 0, // Will be set when activated
-      totalEarnings: 0,
-      directReferrals: [],
-      cycleCompletions: 0,
-      createdAt: serverTimestamp() as Timestamp,
-      metadata: {
-        triggeredBy: 'global_cycle_completion',
-        parentCycleId: cycleId,
-        parentCycleRank
-      }
-    };
-
-    const reidRef = await addDoc(collection(db, 'reids'), reidData);
-    
-    // Create audit log for REID generation
-    await createAuditLog({
-      action: 'reid_generated',
-      targetType: 'reid',
-      target: {
-        type: 'reid',
-        id: reidRef.id
-      },
-      details: JSON.stringify({
-        originalUID,
-        rank,
-        reidNumber,
-        triggeredBy: 'global_cycle_completion',
-        parentCycleId: cycleId,
-        performedBy: originalUID
-      })
-    });
-
-    return reidRef.id;
-  } catch (error) {
-    console.error('Error generating REID from global cycle:', error);
-    throw error;
-  }
-};
-
-// Get user's REIDs
-export const getUserREIDs = async (userId: string): Promise<Reid[]> => {
-  try {
-    const reidsQuery = query(
-      collection(db, 'reids'),
-      where('originalUID', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-    const reidsSnapshot = await getDocs(reidsQuery);
-    
-    return reidsSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...(doc.data() as Omit<Reid, 'id'>)
-    }));
-  } catch (error) {
-    console.error('Error fetching user REIDs:', error);
-    throw error;
-  }
-};
-
-// Activate REID (when user wants to use it for rank upgrade)
-export const activateREID = async (
-  reidId: string,
-  activationAmount: number,
-  sponsorREID?: string
-): Promise<void> => {
-  try {
-    const reidRef = doc(db, 'reids', reidId);
-    const updateData: any = {
-      isActive: true,
-      activationAmount,
-      activatedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-
-    if (sponsorREID) {
-      updateData.sponsorREID = sponsorREID;
-    }
-
-    await updateDoc(reidRef, updateData);
-
-    // Create audit log for REID activation
-    await createAuditLog({
-      action: 'reid_activated',
-      targetType: 'reid',
-      target: {
-        type: 'reid',
-        id: reidId
-      },
-      details: JSON.stringify({
-        performedBy: 'system',
-        activationAmount,
-        sponsorREID
-      }),
-      createdAt: serverTimestamp()
-    });
-  } catch (error) {
-    console.error('Error activating REID:', error);
-    throw error;
-  }
-};
-
-// Update REID earnings
-export const updateREIDEarnings = async (
-  reidId: string,
-  earningsAmount: number,
-  incomeType: string
-): Promise<void> => {
-  try {
-    const reidRef = doc(db, 'reids', reidId);
-    await updateDoc(reidRef, {
-      totalEarnings: increment(earningsAmount),
-      updatedAt: serverTimestamp()
-    });
-
-    // Create audit log for REID earnings update
-    await createAuditLog({
-      action: 'reid_earnings_updated',
-      targetType: 'reid',
-      target: {
-        type: 'reid',
-        id: reidId
-      },
-      details: JSON.stringify({
-        performedBy: 'system',
-        earningsAmount,
-        incomeType
-      }),
-      createdAt: serverTimestamp()
-    });
-  } catch (error) {
-    console.error('Error updating REID earnings:', error);
-    throw error;
-  }
-};
-
-// Enhanced global cycle processing with REID generation
-export const processGlobalCyclePayout = async (
-  cycleId: string,
-  participants: string[],
-  payoutAmount: number,
-  rank: string
-): Promise<{ processedPayouts: string[], generatedREIDs: string[] }> => {
-  try {
-    const batch = writeBatch(db);
-    const processedPayouts: string[] = [];
-    const generatedREIDs: string[] = [];
-
-    // Process payout for each participant
-    for (const participantUID of participants) {
-      // Create income record
-      const incomeRef = doc(collection(db, 'incomes'));
-      const incomeData = {
-        uid: participantUID,
-        type: 'global' as const,
-        amount: payoutAmount,
-        currency: 'USDT_BEP20',
-        rank,
-        cycle: 1,
-        level: null,
-        sourceUserId: null,
-        status: 'credited' as const,
-        createdAt: serverTimestamp() as Timestamp
-      };
-      batch.set(incomeRef, incomeData);
-      processedPayouts.push(incomeRef.id);
-
-      // Update user balance
-      const userRef = doc(db, 'users', participantUID);
-      batch.update(userRef, {
-        availableBalance: increment(payoutAmount),
-        totalEarnings: increment(payoutAmount),
-        updatedAt: serverTimestamp()
-      });
-
-      // Generate REID for infinite cycles (for highest rank participants)
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const userRank = userData.currentRank;
-        
-        // Check if this is the highest rank or REID generation is enabled for this rank
-        const shouldGenerateREID = await checkREIDGenerationEligibility(userRank, rank);
-        
-        if (shouldGenerateREID) {
-          const reidId = await generateREIDFromGlobalCycle(
-            participantUID,
-            rank,
-            cycleId,
-            rank
-          );
-          generatedREIDs.push(reidId);
-        }
-      }
-    }
-
-    // Mark cycle as completed
-    const cycleRef = doc(db, 'globalCycles', cycleId);
-    batch.update(cycleRef, {
-      isComplete: true,
-      completedAt: serverTimestamp(),
-      processedAt: serverTimestamp(),
-      payoutAmount,
-      participantCount: participants.length
-    });
-
-    await batch.commit();
-
-    // Create audit log for global cycle completion
-    await createAuditLog({
-      action: 'global_cycle_completed',
-      targetType: 'globalCycle',
-      target: {
-        type: 'globalCycle',
-        id: cycleId
-      },
-      details: JSON.stringify({
-        performedBy: 'system',
-        participants: participants.length,
-        payoutAmount,
-        rank,
-        processedPayouts: processedPayouts.length,
-        generatedREIDs: generatedREIDs.length
-      })
-    });
-
-    return { processedPayouts, generatedREIDs };
-  } catch (error) {
-    console.error('Error processing global cycle payout:', error);
-    throw error;
-  }
-};
-
-// Check if REID generation is eligible for a rank
-const checkREIDGenerationEligibility = async (userRank: string, cycleRank: string): Promise<boolean> => {
-  try {
-    // Get settings to check REID generation rules
-    const settings = await getSettings();
-    if (!settings) return false;
-
-    // For now, generate REID for users who complete cycles at their current rank or higher
-    const rankOrder = ['azurite', 'pearl', 'topaz', 'emerald', 'ruby', 'diamond', 'crown'];
-    const userRankIndex = rankOrder.indexOf(userRank.toLowerCase());
-    const cycleRankIndex = rankOrder.indexOf(cycleRank.toLowerCase());
-
-    // Generate REID if user's rank is same or higher than cycle rank
-    return userRankIndex >= cycleRankIndex;
-  } catch (error) {
-    console.error('Error checking REID generation eligibility:', error);
-    return false;
-  }
-};
 
 // Settings service
 export const getSettings = async (): Promise<Settings | null> => {
@@ -891,7 +585,6 @@ export const initializeSampleData = async (): Promise<void> => {
       globalPerLevel: [5, 4, 3, 2, 1],
       levelPercentages: { L1: 5, L2: 4, L3: 3, L4: 1, L5: 1, L6: 1 },
       nextRank: 'Benitoite',
-      autoTopUpEnabled: true,
       cyclesToComplete: 14,
       createdAt: serverTimestamp() as Timestamp,
       updatedAt: serverTimestamp() as Timestamp
@@ -905,7 +598,6 @@ export const initializeSampleData = async (): Promise<void> => {
       globalPerLevel: [10, 8, 6, 4, 2],
       levelPercentages: { L1: 5, L2: 4, L3: 3, L4: 1, L5: 1, L6: 1 },
       nextRank: 'Crystals',
-      autoTopUpEnabled: true,
       cyclesToComplete: 14,
       createdAt: serverTimestamp() as Timestamp,
       updatedAt: serverTimestamp() as Timestamp
@@ -927,7 +619,6 @@ export const initializeSampleData = async (): Promise<void> => {
     referralCommissionPercent: 50,
     levelIncomePercentages: { L1: 5, L2: 4, L3: 3, L4: 1, L5: 1, L6: 1 },
     globalCyclesToRun: 14,
-    autoTopUpEnabled: true,
     createdAt: serverTimestamp() as Timestamp,
     updatedAt: serverTimestamp() as Timestamp
   };
@@ -1456,12 +1147,12 @@ export const addTicketResponse = async (
       senderId,
       senderRole,
       message,
-      createdAt: serverTimestamp() as Timestamp
+      createdAt: new Date() as any
     };
 
     await updateDoc(ticketRef, {
       response: arrayUnion(response),
-      updatedAt: serverTimestamp()
+      updatedAt: new Date()
     });
   } catch (error) {
     console.error('Error adding ticket response:', error);
@@ -1536,6 +1227,224 @@ export const getTicketsByPriority = async (priority: string): Promise<SupportTic
     } as SupportTicket));
   } catch (error) {
     console.error('Error fetching tickets by priority:', error);
+    throw error;
+  }
+};
+
+// Pool-based income system functions
+export const calculatePoolIncome = async (userId: string, rank: string): Promise<number> => {
+  try {
+    // Get rank configuration
+    const rankDoc = await getDoc(doc(db, 'ranks', rank.toLowerCase()));
+    if (!rankDoc.exists()) {
+      throw new Error(`Rank ${rank} not found`);
+    }
+    
+    const rankData = rankDoc.data() as Rank;
+    return rankData.poolIncome;
+  } catch (error) {
+    console.error('Error calculating pool income:', error);
+    throw error;
+  }
+};
+
+export const claimIncome = async (userId: string): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error('User not found');
+    }
+    
+    const userData = userDoc.data() as MLMUser;
+    
+    // Check if user is eligible to claim (2 direct referrals)
+    if (!userData.claimEligible || userData.directReferrals < 2) {
+      throw new Error('User not eligible to claim income. Need 2 direct referrals.');
+    }
+    
+    // Get unclaimed income transactions
+    const incomeQuery = query(
+      collection(db, 'incomeTransactions'),
+      where('userId', '==', userId),
+      where('claimable', '==', true),
+      where('claimed', '==', false)
+    );
+    
+    const incomeSnapshot = await getDocs(incomeQuery);
+    let totalClaimable = 0;
+    
+    const batch = writeBatch(db);
+    
+    // Mark all claimable transactions as claimed
+    incomeSnapshot.docs.forEach(incomeDoc => {
+      const incomeData = incomeDoc.data() as IncomeTransaction;
+      totalClaimable += incomeData.amount;
+      
+      batch.update(doc(db, 'incomeTransactions', incomeDoc.id), {
+        claimed: true,
+        claimedAt: serverTimestamp()
+      });
+    });
+    
+    // Update user's available balance
+    batch.update(userRef, {
+      availableBalance: userData.availableBalance + totalClaimable,
+      totalEarnings: userData.totalEarnings + totalClaimable,
+      updatedAt: serverTimestamp()
+    });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error claiming income:', error);
+    throw error;
+  }
+};
+
+export const unlockRank = async (userId: string, targetRank: string): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error('User not found');
+    }
+    
+    const userData = userDoc.data() as MLMUser;
+    
+    // Get target rank configuration
+    const rankDoc = await getDoc(doc(db, 'ranks', targetRank.toLowerCase()));
+    if (!rankDoc.exists()) {
+      throw new Error(`Rank ${targetRank} not found`);
+    }
+    
+    const rankData = rankDoc.data() as Rank;
+    
+    // Check if user has sufficient balance
+    if (userData.availableBalance < rankData.activationAmount) {
+      throw new Error('Insufficient balance to unlock rank');
+    }
+    
+    const batch = writeBatch(db);
+    
+    // Update user's rank and balance
+    batch.update(userRef, {
+      rank: targetRank,
+      availableBalance: userData.availableBalance - rankData.activationAmount,
+      rankActivatedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    
+    // Create transaction record
+    const transactionRef = doc(collection(db, 'transactions'));
+    batch.set(transactionRef, {
+      userId: userId,
+      type: 'rank_unlock',
+      amount: -rankData.activationAmount,
+      currency: 'USD',
+      description: `Unlocked ${targetRank} rank`,
+      status: 'completed',
+      createdAt: serverTimestamp()
+    });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error unlocking rank:', error);
+    throw error;
+  }
+};
+
+export const addPoolIncome = async (userId: string, amount: number, rank: string): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error('User not found');
+    }
+    
+    const userData = userDoc.data() as MLMUser;
+    
+    const batch = writeBatch(db);
+    
+    // Add to locked balance and rank-specific balance
+    const rankKey = rank.toLowerCase() as keyof typeof userData.rankBalances;
+    const updatedRankBalances = {
+      ...userData.rankBalances,
+      [rankKey]: (userData.rankBalances[rankKey] || 0) + amount
+    };
+    
+    batch.update(userRef, {
+      lockedBalance: userData.lockedBalance + amount,
+      poolIncomeEarned: userData.poolIncomeEarned + amount,
+      rankBalances: updatedRankBalances,
+      updatedAt: serverTimestamp()
+    });
+    
+    // Create income transaction record
+    const incomeRef = doc(collection(db, 'incomeTransactions'));
+    batch.set(incomeRef, {
+      itxId: incomeRef.id,
+      userId: userId,
+      type: 'pool',
+      amount: amount,
+      currency: 'USD',
+      rank: rank,
+      claimable: userData.claimEligible,
+      claimed: false,
+      notes: `Pool income from ${rank} rank`,
+      createdAt: serverTimestamp()
+    });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error adding pool income:', error);
+    throw error;
+  }
+};
+
+export const updateDirectReferrals = async (userId: string): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userRef);
+    
+    if (!userDoc.exists()) {
+      throw new Error('User not found');
+    }
+    
+    const userData = userDoc.data() as MLMUser;
+    const newDirectReferrals = userData.directReferrals + 1;
+    const isNowEligible = newDirectReferrals >= 2;
+    
+    const batch = writeBatch(db);
+    
+    // Update user's direct referrals count and eligibility
+    batch.update(userRef, {
+      directReferrals: newDirectReferrals,
+      claimEligible: isNowEligible,
+      updatedAt: serverTimestamp()
+    });
+    
+    // If user becomes eligible, make all their income claimable
+    if (isNowEligible && !userData.claimEligible) {
+      const incomeQuery = query(
+        collection(db, 'incomeTransactions'),
+        where('userId', '==', userId),
+        where('claimed', '==', false)
+      );
+      
+      const incomeSnapshot = await getDocs(incomeQuery);
+      incomeSnapshot.docs.forEach(incomeDoc => {
+        batch.update(doc(db, 'incomeTransactions', incomeDoc.id), {
+          claimable: true
+        });
+      });
+    }
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error updating direct referrals:', error);
     throw error;
   }
 };

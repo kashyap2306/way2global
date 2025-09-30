@@ -74,12 +74,9 @@ const Login: React.FC = () => {
       
       toast.success('Welcome back to Way2Globel!');
       
-      // Navigate based on user role after successful login
-      // Note: We'll get the user data from AuthContext after login
-      setTimeout(() => {
-        // This timeout ensures the AuthContext has updated with user data
-        window.location.reload(); // This will trigger the role-based routing in App.tsx
-      }, 100);
+      // Navigation will be handled by the useEffect in App.tsx based on user data
+      // which will check profile completeness and redirect accordingly
+      navigate('/dashboard');
       
     } catch (error: any) {
       console.error('Login error:', error);

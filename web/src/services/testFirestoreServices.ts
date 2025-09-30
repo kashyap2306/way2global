@@ -12,7 +12,6 @@ import {
   createIncomeTransaction,
   createWithdrawal,
   updateWithdrawalStatus,
-  generateReid,
   getSettings,
   updateSettings,
   createPayoutQueue,
@@ -64,9 +63,6 @@ export class FirestoreServiceTester {
       
       // Test withdrawal services
       await this.testWithdrawalServices();
-      
-      // Test REID services
-      await this.testReidServices();
       
       // Test settings services
       await this.testSettingsServices();
@@ -305,20 +301,6 @@ export class FirestoreServiceTester {
       this.testResults['updateWithdrawalStatus'] = false;
       this.errors['withdrawalServices'] = error instanceof Error ? error.message : 'Unknown error';
       console.log('❌ Withdrawal services failed\n');
-    }
-  }
-
-  private async testReidServices(): Promise<void> {
-    console.log('🔗 Testing REID Services...');
-    
-    try {
-      const reid = await generateReid(TEST_USER_ID, 'Azurite', 1);
-      this.testResults['generateReid'] = typeof reid === 'string' && reid.includes('REID_');
-      console.log('✅ REID generation successful\n');
-    } catch (error) {
-      this.testResults['generateReid'] = false;
-      this.errors['generateReid'] = error instanceof Error ? error.message : 'Unknown error';
-      console.log('❌ REID generation failed\n');
     }
   }
 

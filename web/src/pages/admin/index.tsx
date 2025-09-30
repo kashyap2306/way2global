@@ -59,13 +59,6 @@ const AdminLayout: React.FC = () => {
       badge: '2' // Example pending count
     },
     {
-      name: 'Audit Logs',
-      href: '/admin/audit',
-      icon: DocumentTextIcon,
-      current: location.pathname === '/admin/audit',
-      badge: null
-    },
-    {
       name: 'Global Income',
       href: '/admin/global-income',
       icon: ChartBarIcon,

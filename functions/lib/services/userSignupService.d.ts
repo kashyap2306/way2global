@@ -53,11 +53,6 @@ export declare function createDocumentTemplates(uid: string, userCode: string, u
     settings: {
         uid: string;
         userCode: string;
-        notifications: {
-            email: boolean;
-            sms: boolean;
-            push: boolean;
-        };
         privacy: {
             profileVisible: boolean;
             showEarnings: boolean;

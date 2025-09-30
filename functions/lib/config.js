@@ -95,56 +95,56 @@ exports.config = {
 };
 // MLM Business Rules Configuration
 exports.mlmConfig = {
-    // Rank system
+    // Rank system - Updated to match user's plan
     ranks: {
         azurite: {
             name: 'Azurite',
-            activationAmount: 5,
+            activationAmount: 5, // ✓ Correct per plan
             benefits: { levelIncome: true, globalIncome: false }
         },
         pearl: {
             name: 'Pearl',
-            activationAmount: 25,
+            activationAmount: 10, // ✓ Fixed per plan (was 25)
             benefits: { levelIncome: true, globalIncome: true }
         },
         ruby: {
             name: 'Ruby',
-            activationAmount: 125,
+            activationAmount: 20, // ✓ Fixed per plan (was 125)
             benefits: { levelIncome: true, globalIncome: true }
         },
         emerald: {
             name: 'Emerald',
-            activationAmount: 625,
+            activationAmount: 40, // ✓ Fixed per plan (was 625)
             benefits: { levelIncome: true, globalIncome: true }
         },
         sapphire: {
             name: 'Sapphire',
-            activationAmount: 3125,
+            activationAmount: 80, // ✓ Fixed per plan (was 3125)
             benefits: { levelIncome: true, globalIncome: true }
         },
         diamond: {
             name: 'Diamond',
-            activationAmount: 15625,
+            activationAmount: 160, // ✓ Fixed per plan (was 15625)
             benefits: { levelIncome: true, globalIncome: true }
         },
         doubleDiamond: {
             name: 'Double Diamond',
-            activationAmount: 78125,
+            activationAmount: 320, // ✓ Fixed per plan (was 78125)
             benefits: { levelIncome: true, globalIncome: true }
         },
         tripleDiamond: {
             name: 'Triple Diamond',
-            activationAmount: 390625,
+            activationAmount: 640, // ✓ Fixed per plan (was 390625)
             benefits: { levelIncome: true, globalIncome: true }
         },
         crown: {
             name: 'Crown',
-            activationAmount: 1953125,
+            activationAmount: 1280, // ✓ Fixed per plan (was 1953125)
             benefits: { levelIncome: true, globalIncome: true }
         },
         royalCrown: {
             name: 'Royal Crown',
-            activationAmount: 9765625,
+            activationAmount: 2560, // ✓ Fixed per plan (was 9765625)
             benefits: { levelIncome: true, globalIncome: true }
         }
     },
@@ -165,9 +165,6 @@ exports.mlmConfig = {
             percentage: 10, // 10% distributed across global cycle
             levels: 10, // 10 levels in global cycle
             cycleSize: 1024 // 2^10 = 1024 users per cycle
-        },
-        reTopup: {
-            percentage: 50 // Same as referral income
         }
     },
     // Withdrawal settings
@@ -194,11 +191,11 @@ exports.mlmConfig = {
     },
     // Global cycle settings
     globalCycle: {
-        triggerInterval: 24 * 60 * 60 * 1000, // 24 hours
-        maxCyclesPerRun: 100, // Process max 100 cycles per run
-        autoTopupEnabled: true, // Enable auto top-up to next rank
-        reidGenerationEnabled: true, // Enable RE-ID generation
-        targetAmount: 1000 // Target amount for global cycle
+        triggerInterval: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+        maxCyclesPerRun: 10, // Maximum cycles to process per run
+        targetAmount: 1000, // Target amount for global cycle completion
+        processingInterval: 5 * 60 * 1000, // 5 minutes in milliseconds
+        reIdGeneration: false // Disable RE-ID generation
     },
     // Validation rules
     validation: {
@@ -228,7 +225,7 @@ exports.collections = {
     RANKS: 'ranks',
     INCOME_TRANSACTIONS: 'incomeTransactions',
     WITHDRAWALS: 'withdrawals',
-    REIDS: 'reids',
+    INCOME_POOLS: 'incomePools',
     SETTINGS: 'settings',
     PAYOUT_QUEUE: 'payoutQueue',
     SECURITY_LOGS: 'securityLogs',

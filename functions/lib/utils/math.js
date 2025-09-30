@@ -3,7 +3,7 @@
  * Math utilities for MLM calculations
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseCurrency = exports.formatCurrency = exports.safeDivide = exports.safeMultiply = exports.safeSubtract = exports.safeAdd = exports.fromCents = exports.toCents = exports.roundToTwoDecimals = exports.validateAmountPrecision = exports.calculateTeamIncomeDistribution = exports.calculateAverageIncome = exports.calculateROI = exports.calculateCompoundInterest = exports.getPositionsAtLevel = exports.calculateTreeLevel = exports.getPositionSide = exports.getParentPosition = exports.calculateBinaryPosition = exports.calculateGlobalCycleRequirements = exports.getNextRankActivationAmount = exports.calculateWithdrawalDeductions = exports.calculateReTopupIncome = exports.calculateGlobalIncome = exports.calculateLevelIncome = exports.calculateReferralIncome = void 0;
+exports.parseCurrency = exports.formatCurrency = exports.safeDivide = exports.safeMultiply = exports.safeSubtract = exports.safeAdd = exports.fromCents = exports.toCents = exports.roundToTwoDecimals = exports.validateAmountPrecision = exports.calculateTeamIncomeDistribution = exports.calculateAverageIncome = exports.calculateROI = exports.calculateCompoundInterest = exports.getPositionsAtLevel = exports.calculateTreeLevel = exports.getPositionSide = exports.getParentPosition = exports.calculateBinaryPosition = exports.calculateGlobalCycleRequirements = exports.getNextRankActivationAmount = exports.calculateWithdrawalDeductions = exports.calculateGlobalIncome = exports.calculateLevelIncome = exports.calculateReferralIncome = void 0;
 const config_1 = require("../config");
 /**
  * Calculate referral income (50% of activation amount)
@@ -56,13 +56,6 @@ const calculateGlobalIncome = (totalAmount, level, totalLevels = 10) => {
     return (0, exports.roundToTwoDecimals)(amountPerLevel);
 };
 exports.calculateGlobalIncome = calculateGlobalIncome;
-/**
- * Calculate re-topup income (same as referral income)
- */
-const calculateReTopupIncome = (activationAmount) => {
-    return (0, exports.calculateReferralIncome)(activationAmount);
-};
-exports.calculateReTopupIncome = calculateReTopupIncome;
 /**
  * Calculate withdrawal deductions based on method
  */

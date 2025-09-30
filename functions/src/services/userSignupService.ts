@@ -100,11 +100,6 @@ export function createDocumentTemplates(uid: string, userCode: string, userData:
     settings: {
       uid,
       userCode,
-      notifications: {
-        email: true,
-        sms: false,
-        push: true
-      },
       privacy: {
         profileVisible: true,
         showEarnings: false

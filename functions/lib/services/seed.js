@@ -96,7 +96,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: false,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 0,
@@ -115,7 +115,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 2,
@@ -134,7 +134,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 4,
@@ -153,7 +153,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 6,
@@ -172,7 +172,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 8,
@@ -191,7 +191,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 10,
@@ -210,7 +210,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 12,
@@ -229,7 +229,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 14,
@@ -248,7 +248,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 16,
@@ -267,7 +267,7 @@ class SeedService {
                         referralIncome: true,
                         levelIncome: true,
                         globalIncome: true,
-                        retopupIncome: true
+                        retopupIncome: false // Re-topup system removed
                     },
                     requirements: {
                         directReferrals: 18,
@@ -344,7 +344,7 @@ class SeedService {
                         referral: config_1.mlmConfig.incomes.referral,
                         level: config_1.mlmConfig.incomes.level,
                         global: config_1.mlmConfig.incomes.global,
-                        retopup: config_1.mlmConfig.incomes.referral // Same as referral
+                        retopup: { percentage: 0, enabled: false } // Re-topup system removed
                     },
                     isActive: true,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -357,8 +357,8 @@ class SeedService {
                         cycleSize: config_1.mlmConfig.incomes.global.cycleSize,
                         levels: config_1.mlmConfig.incomes.global.levels,
                         percentage: config_1.mlmConfig.incomes.global.percentage,
-                        autoTopupEnabled: config_1.mlmConfig.globalCycle.autoTopupEnabled,
-                        reidGenerationEnabled: config_1.mlmConfig.globalCycle.reidGenerationEnabled
+                        autoTopupEnabled: false, // Removed from config
+                        reidGenerationEnabled: config_1.mlmConfig.globalCycle.reIdGeneration
                     },
                     isActive: true,
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -675,7 +675,7 @@ class SeedService {
                 config_1.collections.RANKS,
                 config_1.collections.INCOME_TRANSACTIONS,
                 config_1.collections.WITHDRAWALS,
-                config_1.collections.REIDS,
+                config_1.collections.INCOME_POOLS, // Changed from REIDS to INCOME_POOLS
                 config_1.collections.SETTINGS,
                 config_1.collections.PAYOUT_QUEUE,
                 config_1.collections.GLOBAL_CYCLES

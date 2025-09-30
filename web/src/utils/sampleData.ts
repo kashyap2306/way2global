@@ -109,9 +109,7 @@ export const mlmFeatures = [
   'Referral Commission (50%)',
   'Level Income (L1: 5%, L2: 4%, L3: 3%, L4-L6: 1%)',
   'Global Income Distribution',
-  'Auto Top-Up System',
   'Rank Upgrades',
-  'RE-ID Generation',
   'Withdrawal System (15% fee)',
   'P2P Transfers',
   'Fund Conversion'

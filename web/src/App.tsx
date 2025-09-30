@@ -13,6 +13,7 @@ import ReferralsPage from './pages/ReferralsPage';
 import TopupPage from './pages/TopupPage';
 import LevelIncomePage from './pages/LevelIncomePage';
 import GlobalIncomePage from './pages/GlobalIncomePage';
+import GlobalIncomeSection from './pages/GlobalIncomeSection';
 import MyTicketsPage from './pages/MyTicketsPage';
 import AdminRoute from './components/AdminRoute';
 import AdminLayout from './pages/admin';
@@ -23,7 +24,6 @@ import WithdrawalsManagement from './pages/admin/WithdrawalsManagement';
 import TopupsManagement from './pages/admin/TopupsManagement';
 import AdminSettings from './pages/admin/AdminSettings';
 import PlatformSettings from './pages/admin/PlatformSettings';
-import AuditLogs from './pages/admin/AuditLogs';
 import SupportTickets from './pages/admin/SupportTickets';
 import GlobalIncomeManagement from './pages/admin/GlobalIncomeManagement';
 
@@ -42,12 +42,21 @@ const AppContent: React.FC = () => {
     if (currentUser && userData) {
       const currentPath = window.location.pathname;
       
+      // Check if profile is incomplete (missing required fields)
+      const isProfileIncomplete = !userData.displayName || !userData.contact || !userData.walletAddress;
+      
+      // If profile is incomplete and not already on user-details page, redirect there
+      if (isProfileIncomplete && !currentPath.startsWith('/user-details')) {
+        window.location.href = `/user-details/${currentUser.uid}`;
+        return;
+      }
+      
       // If user is admin and not on admin route, redirect to admin dashboard
-      if (userData.role === 'admin' && !currentPath.startsWith('/admin')) {
+      if (userData.role === 'admin' && !currentPath.startsWith('/admin') && !isProfileIncomplete) {
         window.location.href = '/admin';
       }
       // If user is regular user and on admin route, redirect to dashboard
-      else if (userData.role === 'user' && currentPath.startsWith('/admin')) {
+      else if (userData.role === 'user' && currentPath.startsWith('/admin') && !isProfileIncomplete) {
         window.location.href = '/dashboard';
       }
     }
@@ -114,7 +123,7 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <DashboardLayout>
-              <GlobalIncomePage />
+              <GlobalIncomeSection />
             </DashboardLayout>
           </ProtectedRoute>
         } 
@@ -157,7 +166,7 @@ const AppContent: React.FC = () => {
       />
       <Route 
               path="/global-income-redesigned" 
-              element={<GlobalIncomePage />}
+              element={<GlobalIncomeSection />}
             />
       
       {/* Support Ticket Routes */}
@@ -190,7 +199,6 @@ const AppContent: React.FC = () => {
         <Route path="topups" element={<TopupsManagement />} />
         <Route path="manage-topups" element={<TopupsManagement />} />
         <Route path="support" element={<SupportTickets />} />
-        <Route path="audit" element={<AuditLogs />} />
         <Route path="global-income" element={<GlobalIncomeManagement />} />
         <Route path="settings" element={<PlatformSettings />} />
         <Route path="settings-advanced" element={<AdminSettings />} />

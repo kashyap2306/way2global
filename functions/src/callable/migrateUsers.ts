@@ -247,10 +247,10 @@ async function checkAndCreateMissingCollections(
       history: []
     },
     reids: {
-      reid: `REID_${userId}_migration`,
+      poolId: `pool_${userId}_migration`,
       userId: userId,
-      originRank: userData.rank || 'Azurite',
-      originCycle: 1,
+      rank: userData.rank || 'Azurite',
+      amount: 0,
       generatedAt: admin.firestore.FieldValue.serverTimestamp(),
       status: 'active',
       linkedToTx: null,
@@ -323,7 +323,7 @@ async function checkAndCreateMissingCollections(
   // Check each collection and create if missing
   const collectionsToCheck = [
     { name: 'withdrawals', collection: collections.WITHDRAWALS },
-    { name: 'reids', collection: collections.REIDS },
+    { name: 'incomePools', collection: collections.INCOME_POOLS },
     { name: 'settings', collection: 'settings' },
     { name: 'payoutQueue', collection: collections.PAYOUT_QUEUE },
     { name: 'admin', collection: 'admin' },

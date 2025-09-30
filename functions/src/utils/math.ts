@@ -62,12 +62,7 @@ export const calculateGlobalIncome = (
   return roundToTwoDecimals(amountPerLevel);
 };
 
-/**
- * Calculate re-topup income (same as referral income)
- */
-export const calculateReTopupIncome = (activationAmount: number): number => {
-  return calculateReferralIncome(activationAmount);
-};
+
 
 /**
  * Calculate withdrawal deductions based on method

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { User, Mail, Phone, Wallet, Users, Shield, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { User, Mail, Phone, Wallet, Users, Shield, Eye, EyeOff, ArrowRight, Edit3, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface UserData {
@@ -16,34 +17,79 @@ interface UserData {
   createdAt: any;
 }
 
+interface EditableFields {
+  fullName: string;
+  phone: string;
+  walletAddress: string;
+}
+
 const UserDetails: React.FC = () => {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
+  const { currentUser, userData: authUserData } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<EditableFields>({
+    fullName: '',
+    phone: '',
+    walletAddress: ''
+  });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!userId) {
-      setError('User ID not provided');
+    // If no userId in params but user is logged in, use their UID
+    const targetUserId = userId || currentUser?.uid;
+    
+    if (!targetUserId) {
+      setError('User ID not provided and no user logged in');
       setLoading(false);
       return;
     }
 
-    fetchUserData();
-  }, [userId]);
+    // If we have auth user data and it matches the target user, use it
+    if (authUserData && currentUser?.uid === targetUserId) {
+      const userData = {
+        userId: authUserData.uid,
+        fullName: authUserData.displayName || '',
+        email: authUserData.email || '',
+        phone: authUserData.contact || '',
+        walletAddress: authUserData.walletAddress || '',
+        sponsorId: authUserData.sponsorId || '',
+        status: authUserData.status || '',
+        createdAt: authUserData.createdAt
+      };
+      setUserData(userData);
+      setEditData({
+        fullName: userData.fullName,
+        phone: userData.phone,
+        walletAddress: userData.walletAddress
+      });
+      setLoading(false);
+      return;
+    } else {
+      fetchUserData(targetUserId);
+    }
+  }, [userId, currentUser, authUserData]);
 
-  const fetchUserData = async () => {
+  const fetchUserData = async (targetUserId: string) => {
     try {
       setLoading(true);
-      const userDoc = await getDoc(doc(db, 'users', userId!));
+      const userDoc = await getDoc(doc(db, 'users', targetUserId));
       
       if (userDoc.exists()) {
         const data = userDoc.data() as UserData;
         setUserData(data);
+        setEditData({
+          fullName: data.fullName,
+          phone: data.phone,
+          walletAddress: data.walletAddress
+        });
       } else {
         setError('User not found');
+        toast.error('User data not found. Please contact support.');
       }
     } catch (error: any) {
       console.error('Error fetching user data:', error);
@@ -56,6 +102,80 @@ const UserDetails: React.FC = () => {
 
   const handleGoToDashboard = () => {
     navigate('/dashboard');
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    // Reset edit data to original values
+    if (userData) {
+      setEditData({
+        fullName: userData.fullName,
+        phone: userData.phone,
+        walletAddress: userData.walletAddress
+      });
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!userData || !currentUser) return;
+
+    // Validate fields
+    if (!editData.fullName.trim()) {
+      toast.error('Full name is required');
+      return;
+    }
+    if (!editData.phone.trim()) {
+      toast.error('Phone number is required');
+      return;
+    }
+    if (!editData.walletAddress.trim()) {
+      toast.error('Wallet address is required');
+      return;
+    }
+
+    // Validate wallet address format
+    if (!/^0x[a-fA-F0-9]{40}$/.test(editData.walletAddress)) {
+      toast.error('Please enter a valid BEP20 wallet address');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      // Update Firestore document
+      await updateDoc(doc(db, 'users', userData.userId), {
+        displayName: editData.fullName,
+        contact: editData.phone,
+        walletAddress: editData.walletAddress
+      });
+
+      // Update local state
+      setUserData({
+        ...userData,
+        fullName: editData.fullName,
+        phone: editData.phone,
+        walletAddress: editData.walletAddress
+      });
+
+      setIsEditing(false);
+      toast.success('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof EditableFields, value: string) => {
+    setEditData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   if (loading) {
@@ -82,10 +202,16 @@ const UserDetails: React.FC = () => {
             <h2 className="text-xl font-bold text-gray-900 mb-2">Error Loading Data</h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <button
-              onClick={() => navigate('/signup')}
-              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              onClick={() => navigate('/login')}
+              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors mr-4"
             >
-              Back to Signup
+              Back to Login
+            </button>
+            <button
+              onClick={() => navigate('/signup')}
+              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+            >
+              Create Account
             </button>
           </div>
         </div>
@@ -110,12 +236,46 @@ const UserDetails: React.FC = () => {
 
         {/* User Details Card */}
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl shadow-purple-500/10 p-8 border border-white/20 mb-8">
-          {/* Status Badge */}
-          <div className="flex justify-center mb-6">
-            <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-full shadow-lg">
-              <Shield className="w-5 h-5 mr-2" />
-              Status: {userData.status.toUpperCase()}
+          {/* Header with Edit Button */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-center flex-1">
+              <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-full shadow-lg">
+                <Shield className="w-5 h-5 mr-2" />
+                Status: {userData.status.toUpperCase()}
+              </div>
             </div>
+            {currentUser?.uid === userData.userId && (
+              <div className="flex space-x-2">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={saving}
+                      className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg transition-colors"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={saving}
+                      className="flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleEdit}
+                    className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -136,9 +296,19 @@ const UserDetails: React.FC = () => {
                 <User className="w-4 h-4 mr-2" />
                 Full Name
               </label>
-              <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200">
-                <p className="text-lg font-semibold text-gray-900">{userData.fullName}</p>
-              </div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editData.fullName}
+                  onChange={(e) => handleInputChange('fullName', e.target.value)}
+                  className="w-full p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200 text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="Enter your full name"
+                />
+              ) : (
+                <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200">
+                  <p className="text-lg font-semibold text-gray-900">{userData.fullName}</p>
+                </div>
+              )}
             </div>
 
             {/* Email ID */}
@@ -177,9 +347,19 @@ const UserDetails: React.FC = () => {
                 <Phone className="w-4 h-4 mr-2" />
                 Phone Number
               </label>
-              <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200">
-                <p className="text-lg font-semibold text-gray-900">{userData.phone}</p>
-              </div>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  value={editData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className="w-full p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200 text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="Enter your phone number"
+                />
+              ) : (
+                <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200">
+                  <p className="text-lg font-semibold text-gray-900">{userData.phone}</p>
+                </div>
+              )}
             </div>
 
             {/* Upline User ID */}
@@ -199,9 +379,19 @@ const UserDetails: React.FC = () => {
                 <Wallet className="w-4 h-4 mr-2" />
                 Wallet Address
               </label>
-              <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200">
-                <p className="text-lg font-mono font-semibold text-gray-900 break-all">{userData.walletAddress}</p>
-              </div>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editData.walletAddress}
+                  onChange={(e) => handleInputChange('walletAddress', e.target.value)}
+                  className="w-full p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200 text-lg font-mono font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="Enter your USDT BEP20 wallet address (0x...)"
+                />
+              ) : (
+                <div className="p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl border border-violet-200">
+                  <p className="text-lg font-mono font-semibold text-gray-900 break-all">{userData.walletAddress}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

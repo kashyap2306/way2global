@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.corsHandler = exports.healthCheck = exports.scheduledGlobalCycle = exports.onActivationTxCreated = exports.onUserCreated = exports.seedDatabase = exports.claimPayout = exports.requestWithdrawal = exports.createActivation = exports.getUserData = exports.login = exports.signup = exports.userHandlers = exports.adminHandlers = exports.authHandlers = void 0;
+exports.corsHandler = exports.healthCheck = exports.updatePlatformSettingsHttp = exports.getPlatformSettingsHttp = exports.updatePlatformSettings = exports.getPlatformSettings = exports.activateRankHttp = exports.activateRank = exports.claimLockedIncome = exports.manualPoolIncomeGeneration = exports.autoPoolIncomeGenerator = exports.onActivationTxCreated = exports.onUserCreated = exports.seedDatabase = exports.claimPayout = exports.requestWithdrawal = exports.createActivation = exports.getUserData = exports.login = exports.signup = exports.userHandlers = exports.adminHandlers = exports.authHandlers = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
@@ -66,8 +66,21 @@ Object.defineProperty(exports, "onUserCreated", { enumerable: true, get: functio
 var onActivationTxCreated_1 = require("./triggers/onActivationTxCreated");
 Object.defineProperty(exports, "onActivationTxCreated", { enumerable: true, get: function () { return onActivationTxCreated_1.onActivationTxCreated; } });
 // Export scheduled functions
-var scheduledGlobalCycle_1 = require("./triggers/scheduledGlobalCycle");
-Object.defineProperty(exports, "scheduledGlobalCycle", { enumerable: true, get: function () { return scheduledGlobalCycle_1.scheduledGlobalCycle; } });
+// export { scheduledGlobalCycle } from './triggers/scheduledGlobalCycle';
+var autoPoolIncomeGenerator_1 = require("./triggers/autoPoolIncomeGenerator");
+Object.defineProperty(exports, "autoPoolIncomeGenerator", { enumerable: true, get: function () { return autoPoolIncomeGenerator_1.autoPoolIncomeGenerator; } });
+Object.defineProperty(exports, "manualPoolIncomeGeneration", { enumerable: true, get: function () { return autoPoolIncomeGenerator_1.manualPoolIncomeGeneration; } });
+// Export new API endpoints
+var claimLockedIncome_1 = require("./api/claimLockedIncome");
+Object.defineProperty(exports, "claimLockedIncome", { enumerable: true, get: function () { return claimLockedIncome_1.claimLockedIncome; } });
+var activateRank_1 = require("./api/activateRank");
+Object.defineProperty(exports, "activateRank", { enumerable: true, get: function () { return activateRank_1.activateRank; } });
+Object.defineProperty(exports, "activateRankHttp", { enumerable: true, get: function () { return activateRank_1.activateRankHttp; } });
+var platformSettings_1 = require("./api/platformSettings");
+Object.defineProperty(exports, "getPlatformSettings", { enumerable: true, get: function () { return platformSettings_1.getPlatformSettings; } });
+Object.defineProperty(exports, "updatePlatformSettings", { enumerable: true, get: function () { return platformSettings_1.updatePlatformSettings; } });
+Object.defineProperty(exports, "getPlatformSettingsHttp", { enumerable: true, get: function () { return platformSettings_1.getPlatformSettingsHttp; } });
+Object.defineProperty(exports, "updatePlatformSettingsHttp", { enumerable: true, get: function () { return platformSettings_1.updatePlatformSettingsHttp; } });
 // Health check endpoint
 exports.healthCheck = functions.https.onRequest((req, res) => {
     res.status(200).json({

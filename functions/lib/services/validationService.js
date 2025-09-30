@@ -92,12 +92,7 @@ exports.userProfileUpdateSchema = Joi.object({
     preferences: Joi.object({
         language: Joi.string().length(2).lowercase().optional(),
         timezone: Joi.string().optional(),
-        currency: Joi.string().length(3).uppercase().optional(),
-        notifications: Joi.object({
-            email: Joi.boolean().optional(),
-            sms: Joi.boolean().optional(),
-            push: Joi.boolean().optional()
-        }).optional()
+        currency: Joi.string().length(3).uppercase().optional()
     }).optional()
 });
 exports.userLoginSchema = Joi.object({
@@ -187,7 +182,6 @@ exports.adminUserUpdateSchema = Joi.object({
     status: Joi.string().valid(...Object.values(types_1.UserStatus)).optional(),
     currentRank: Joi.string().optional(),
     autoTopup: Joi.boolean().optional(),
-    notifications: Joi.boolean().optional(),
     customClaims: Joi.object({
         admin: Joi.boolean().optional(),
         superAdmin: Joi.boolean().optional()
@@ -214,8 +208,8 @@ exports.adminSettingsUpdateSchema = Joi.object({
     income: Joi.object({
         referralBonus: Joi.number().min(0).max(100).optional(),
         levelBonuses: Joi.array().items(Joi.number().min(0).max(100)).optional(),
-        globalPoolPercentage: Joi.number().min(0).max(100).optional(),
-        reTopupBonus: Joi.number().min(0).max(100).optional()
+        globalPoolPercentage: Joi.number().min(0).max(100).optional()
+        // reTopupBonus removed - re-topup system removed
     }).optional(),
     globalCycle: Joi.object({
         participantLimit: Joi.number().integer().positive().optional(),
