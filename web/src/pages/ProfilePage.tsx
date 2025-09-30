@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getMLMUser, type MLMUser } from '../services/firestoreService';
+import { type MLMUser } from '../services/firestoreService';
 import { updateProfile, updatePassword, sendPasswordResetEmail } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
@@ -378,7 +378,7 @@ const ProfilePage: React.FC = () => {
                 Current Rank
               </label>
               <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-600/30">
-                <p className="text-white font-semibold text-sm sm:text-base capitalize">{userData?.currentRank || userData?.rank || 'Not Ranked Yet'}</p>
+                <p className="text-white font-semibold text-sm sm:text-base capitalize">{userData?.rank || 'Not Ranked Yet'}</p>
               </div>
             </div>
           </div>

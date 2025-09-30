@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { doc, getDoc, updateDoc, serverTimestamp, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { createAllUserDocuments } from '../services/userSignupService';
 

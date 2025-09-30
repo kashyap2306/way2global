@@ -18,7 +18,7 @@ interface SignupFormData {
 
 const Signup: React.FC = () => {
   const navigate = useNavigate();
-  const { signup, currentUser } = useAuth();
+  const { signup } = useAuth();
   const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState<SignupFormData>({
     fullName: '',
