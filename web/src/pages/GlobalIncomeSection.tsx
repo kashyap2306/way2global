@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  TrophyIcon,
   LockClosedIcon,
   LockOpenIcon,
-  ArrowRightIcon,
   CheckCircleIcon,
   ClockIcon,
   CurrencyDollarIcon,
@@ -25,7 +23,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { claimIncome, unlockRank } from '../services/firestoreService';
+import { claimIncome } from '../services/firestoreService';
 import Modal from '../components/ui/Modal';
 import { useModal } from '../hooks/useModal';
 
@@ -317,7 +315,8 @@ const GlobalIncomeSection: React.FC = () => {
 
     const unsubscribeTransactions = onSnapshot(transactionsQuery, (snapshot) => {
       const transactions: PoolTransaction[] = [];
-      snapshot.forEach((doc, index) => {
+      let index = 0;
+      snapshot.forEach((doc) => {
         const data = doc.data();
         transactions.push({
           id: doc.id,
@@ -329,6 +328,7 @@ const GlobalIncomeSection: React.FC = () => {
           serial: index + 1, // Serial based on join order
           joinOrder: index + 1
         });
+        index++;
       });
       setPoolTransactions(transactions);
     });
@@ -388,10 +388,11 @@ const GlobalIncomeSection: React.FC = () => {
         paymentMethod: 'wallet'
       });
 
-      if (result.data.success) {
+      const responseData = result.data as { success: boolean; message?: string };
+      if (responseData.success) {
         showSuccess('Rank Unlocked', `Successfully unlocked ${rank} rank!`);
       } else {
-        throw new Error(result.data.message || 'Failed to unlock rank');
+        throw new Error(responseData.message || 'Failed to unlock rank');
       }
     } catch (error: any) {
       console.error('Error unlocking rank:', error);
@@ -486,10 +487,11 @@ const GlobalIncomeSection: React.FC = () => {
         paymentMethod: 'wallet'
       });
 
-      if (result.data.success) {
-        alert(`Successfully unlocked ${result.data.activatedRanks.length} ranks!`);
+      const responseData = result.data as { success: boolean; message?: string; activatedRanks?: any[] };
+      if (responseData.success) {
+        alert(`Successfully unlocked ${responseData.activatedRanks?.length || 0} ranks!`);
       } else {
-        throw new Error(result.data.message || 'Failed to unlock ranks');
+        throw new Error(responseData.message || 'Failed to unlock ranks');
       }
     } catch (error: any) {
       console.error('Error unlocking all ranks:', error);
@@ -560,7 +562,6 @@ const GlobalIncomeSection: React.FC = () => {
 
   const rankData = getRankData();
   const totalLockedIncome = rankData.reduce((sum, rank) => sum + rank.lockedIncome, 0);
-  const totalAvailableIncome = rankData.reduce((sum, rank) => sum + rank.availableIncome, 0);
   const totalClaimableIncome = userPoolData?.claimableIncome || 0;
 
   return (

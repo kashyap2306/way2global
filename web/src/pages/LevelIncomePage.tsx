@@ -18,7 +18,6 @@ import {
   MagnifyingGlassIcon,
   ClipboardIcon,
   CheckIcon,
-  InformationCircleIcon,
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';

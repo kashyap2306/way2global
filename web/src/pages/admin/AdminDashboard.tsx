@@ -30,9 +30,10 @@ interface RecentActivity {
   id: string;
   user: string;
   action: string;
-  amount: string;
+  amount: string | null;
   time: string;
   status: string;
+  link?: string;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -99,54 +100,13 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const getTimeAgo = (date: Date): string => {
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays} days ago`;
-  };
 
-  const formatActionText = (action: string): string => {
-    const actionMap: Record<string, string> = {
-      'user_suspended': 'User Suspended',
-      'user_reactivated': 'User Reactivated',
-      'user_updated': 'User Profile Updated',
-      'withdrawal_approved': 'Withdrawal Approved',
-      'withdrawal_rejected': 'Withdrawal Rejected',
-      'topup_approved': 'Topup Approved',
-      'topup_rejected': 'Topup Rejected',
-      'settings_updated': 'Settings Updated',
-      'user_balance_updated': 'Balance Updated',
-      'user_rank_updated': 'Rank Updated',
-      'admin_login': 'Admin Login',
-      'admin_logout': 'Admin Logout',
-      'bulk_action_performed': 'Bulk Action'
-    };
-    return actionMap[action] || action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  };
 
-  const getActivityStatus = (action: string): string => {
-    if (action.includes('approved') || action.includes('reactivated')) return 'completed';
-    if (action.includes('rejected') || action.includes('suspended')) return 'rejected';
-    if (action.includes('pending')) return 'pending';
-    return 'active';
-  };
 
-  const getActivityAmount = (details: any): string => {
-    if (details && typeof details === 'object') {
-      if (details.amount) return `$${details.amount}`;
-      if (details.after && details.after.amount) return `$${details.after.amount}`;
-      if (details.before && details.before.amount) return `$${details.before.amount}`;
-    }
-    return '-';
-  };
+
+
+
+
 
   const statCards = [
     {

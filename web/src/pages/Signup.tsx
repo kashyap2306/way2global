@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, User, Mail, Phone, Lock, Wallet, Users, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getReferrerByUserCode } from '../services/firestoreService';
 import toast from 'react-hot-toast';
 import AnimatedCheck from '../components/AnimatedCheck';
 
@@ -35,14 +36,37 @@ const Signup: React.FC = () => {
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: '', color: '' });
   const [showSuccess, setShowSuccess] = useState(false);
   const [signupUserId, setSignupUserId] = useState<string>('');
+  const [referrerName, setReferrerName] = useState<string>('');
+  const [loadingReferrer, setLoadingReferrer] = useState(false);
 
-  // Auto-fill sponsor ID from URL parameters
+  // Auto-fill sponsor ID from URL parameters and fetch referrer name
   useEffect(() => {
     const ref = searchParams.get('ref') || searchParams.get('referral');
     if (ref) {
       setFormData(prev => ({ ...prev, sponsorId: ref }));
+      fetchReferrerName(ref);
     }
   }, [searchParams]);
+
+  const fetchReferrerName = async (userCode: string) => {
+    if (!userCode) return;
+    
+    setLoadingReferrer(true);
+    try {
+      const referrerData = await getReferrerByUserCode(userCode);
+      if (referrerData) {
+        setReferrerName(referrerData.fullName);
+      } else {
+        setReferrerName('');
+        toast.error('Invalid referral code');
+      }
+    } catch (error) {
+      console.error('Error fetching referrer:', error);
+      setReferrerName('');
+    } finally {
+      setLoadingReferrer(false);
+    }
+  };
 
   const checkPasswordStrength = (password: string) => {
     let score = 0;
@@ -457,17 +481,40 @@ const Signup: React.FC = () => {
                 <input
                   type="text"
                   name="sponsorId"
-                  className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300"
+                  className={`w-full pl-10 pr-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300 ${
+                    (searchParams.get('ref') || searchParams.get('referral')) ? 'cursor-not-allowed opacity-75' : ''
+                  }`}
                   placeholder="Enter sponsor's user code"
                   value={formData.sponsorId}
                   onChange={handleInputChange}
+                  readOnly={!!(searchParams.get('ref') || searchParams.get('referral'))}
                 />
               </div>
               {formData.sponsorId && (
-                <p className="text-blue-400 text-sm flex items-center space-x-1">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Sponsor ID: {formData.sponsorId}</span>
-                </p>
+                <div className="space-y-1">
+                  <p className="text-blue-400 text-sm flex items-center space-x-1">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Sponsor ID: {formData.sponsorId}</span>
+                  </p>
+                  {loadingReferrer && (
+                    <div className="text-slate-400 text-sm flex items-center space-x-1">
+                      <div className="w-3 h-3 border border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Loading referrer info...</span>
+                    </div>
+                  )}
+                  {referrerName && !loadingReferrer && (
+                    <p className="text-green-400 text-sm flex items-center space-x-1">
+                      <User className="w-4 h-4" />
+                      <span>Referred by: {referrerName}</span>
+                    </p>
+                  )}
+                  {!referrerName && !loadingReferrer && formData.sponsorId && (
+                    <p className="text-red-400 text-sm flex items-center space-x-1">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>Invalid referral code</span>
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 

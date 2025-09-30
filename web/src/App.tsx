@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -12,7 +12,7 @@ import HomePage from './pages/HomePage';
 import ReferralsPage from './pages/ReferralsPage';
 import TopupPage from './pages/TopupPage';
 import LevelIncomePage from './pages/LevelIncomePage';
-import GlobalIncomePage from './pages/GlobalIncomePage';
+
 import GlobalIncomeSection from './pages/GlobalIncomeSection';
 import MyTicketsPage from './pages/MyTicketsPage';
 import AdminRoute from './components/AdminRoute';
@@ -36,10 +36,12 @@ import './App.css';
 
 const AppContent: React.FC = () => {
   const { currentUser, userData } = useAuth();
+  const navigate = useNavigate();
+  const redirectedRef = React.useRef(false);
 
   // Role-based navigation logic
   React.useEffect(() => {
-    if (currentUser && userData) {
+    if (currentUser && userData && !redirectedRef.current) {
       const currentPath = window.location.pathname;
       
       // Check if profile is incomplete (missing required fields)
@@ -47,20 +49,28 @@ const AppContent: React.FC = () => {
       
       // If profile is incomplete and not already on user-details page, redirect there
       if (isProfileIncomplete && !currentPath.startsWith('/user-details')) {
-        window.location.href = `/user-details/${currentUser.uid}`;
+        redirectedRef.current = true;
+        navigate(`/user-details/${currentUser.uid}`, { replace: true });
         return;
       }
       
       // If user is admin and not on admin route, redirect to admin dashboard
       if (userData.role === 'admin' && !currentPath.startsWith('/admin') && !isProfileIncomplete) {
-        window.location.href = '/admin';
+        redirectedRef.current = true;
+        navigate('/admin', { replace: true });
       }
       // If user is regular user and on admin route, redirect to dashboard
       else if (userData.role === 'user' && currentPath.startsWith('/admin') && !isProfileIncomplete) {
-        window.location.href = '/dashboard';
+        redirectedRef.current = true;
+        navigate('/dashboard', { replace: true });
       }
     }
-  }, [currentUser, userData]);
+  }, [currentUser, userData, navigate]);
+
+  // Reset redirect flag when user changes
+  React.useEffect(() => {
+    redirectedRef.current = false;
+  }, [currentUser?.uid]);
 
   return (
     <Routes>
@@ -74,7 +84,9 @@ const AppContent: React.FC = () => {
       />
       <Route 
         path="/user-details/:userId" 
-        element={<UserDetails />} 
+        element={
+          currentUser ? <UserDetails /> : <Navigate to="/login" replace />
+        } 
       />
       
       {/* Dashboard Routes with Layout */}

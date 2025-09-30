@@ -7,7 +7,6 @@ import {
   BanknotesIcon,
   CreditCardIcon,
   TicketIcon,
-  DocumentTextIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   ChartBarIcon,

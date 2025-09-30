@@ -13,7 +13,6 @@ import {
   serverTimestamp, 
   Timestamp,
   arrayUnion,
-  increment,
   writeBatch,
   type DocumentReference,
   type FieldValue
@@ -836,9 +835,11 @@ export const addToGlobalCycle = async (userId: string, rank: string, activationA
       
       // If cycle is now complete, process global cycle payouts
       if ((cycleData.currentParticipants || 0) + 1 >= (cycleData.maxParticipants || 10)) {
-        const participants = cycleData.participants || [];
-        const payoutAmount = (cycleData.totalAmount || 0) / (cycleData.maxParticipants || 10);
-        await processGlobalCyclePayout(cycleRef.id, participants, payoutAmount, rank);
+        // TODO: Implement processGlobalCyclePayout function
+        console.log('Global cycle completed for rank:', rank);
+        // const participants = cycleData.participants || [];
+        // const payoutAmount = (cycleData.totalAmount || 0) / (cycleData.maxParticipants || 10);
+        // await processGlobalCyclePayout(cycleRef.id, participants, payoutAmount, rank);
       }
     }
     
@@ -973,7 +974,7 @@ export const processRankUpgrade = async (
           await createIncomeTransaction({
             itxId: `itx_level_${level}_${Date.now()}`,
             userId: uplineUserId,
-            type: 'level',
+            type: 'referral',
             amount: levelIncomeAmount,
             currency,
             rank: newRank,
@@ -1232,7 +1233,7 @@ export const getTicketsByPriority = async (priority: string): Promise<SupportTic
 };
 
 // Pool-based income system functions
-export const calculatePoolIncome = async (userId: string, rank: string): Promise<number> => {
+export const calculatePoolIncome = async (rank: string): Promise<number> => {
   try {
     // Get rank configuration
     const rankDoc = await getDoc(doc(db, 'ranks', rank.toLowerCase()));
@@ -1371,13 +1372,13 @@ export const addPoolIncome = async (userId: string, amount: number, rank: string
     // Add to locked balance and rank-specific balance
     const rankKey = rank.toLowerCase() as keyof typeof userData.rankBalances;
     const updatedRankBalances = {
-      ...userData.rankBalances,
-      [rankKey]: (userData.rankBalances[rankKey] || 0) + amount
+      ...(userData.rankBalances || {}),
+      [rankKey]: ((userData.rankBalances?.[rankKey] || 0) + amount)
     };
     
     batch.update(userRef, {
       lockedBalance: userData.lockedBalance + amount,
-      poolIncomeEarned: userData.poolIncomeEarned + amount,
+      poolIncomeEarned: (userData.poolIncomeEarned || 0) + amount,
       rankBalances: updatedRankBalances,
       updatedAt: serverTimestamp()
     });
@@ -1446,5 +1447,27 @@ export const updateDirectReferrals = async (userId: string): Promise<void> => {
   } catch (error) {
     console.error('Error updating direct referrals:', error);
     throw error;
+  }
+};
+
+// Get referrer data by userCode
+export const getReferrerByUserCode = async (userCode: string): Promise<{ fullName: string; displayName: string } | null> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('userCode', '==', userCode));
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+    
+    const userData = querySnapshot.docs[0].data() as MLMUser;
+    return {
+      fullName: userData.fullName || userData.displayName || 'Unknown User',
+      displayName: userData.displayName || userData.fullName || 'Unknown User'
+    };
+  } catch (error) {
+    console.error('Error fetching referrer data:', error);
+    return null;
   }
 };
