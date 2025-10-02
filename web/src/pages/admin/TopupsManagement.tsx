@@ -20,7 +20,8 @@ import {
   BanknotesIcon,
   ShieldCheckIcon,
   DocumentTextIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  ClipboardDocumentIcon
 } from '@heroicons/react/24/outline';
 import { adminService, type TopupRequest } from '../../services/adminService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -39,6 +40,20 @@ const TopupsManagement: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [copiedTxHash, setCopiedTxHash] = useState(false);
+
+  const handleCopyTxHash = () => {
+    if (selectedTopup?.txHash) {
+      navigator.clipboard.writeText(selectedTopup.txHash);
+      setCopiedTxHash(true);
+      setTimeout(() => setCopiedTxHash(false), 2000);
+    }
+  };
+
+  const handleViewDetails = (topup: TopupRequest) => {
+    setSelectedTopup(topup);
+    setShowDetailsModal(true);
+  };
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,7 +90,7 @@ const TopupsManagement: React.FC = () => {
       filtered = filtered.filter(topup => 
         topup.userName?.toLowerCase().includes(term) ||
         topup.userEmail?.toLowerCase().includes(term) ||
-        topup.userId.toLowerCase().includes(term) ||
+        topup.userCode?.toLowerCase().includes(term) ||
         topup.transactionId?.toLowerCase().includes(term)
       );
     }
@@ -413,7 +428,7 @@ const TopupsManagement: React.FC = () => {
                         <h3 className="text-white font-semibold text-sm group-hover:text-purple-300 transition-colors">
                           {topup.userName || 'Unknown User'}
                         </h3>
-                        <p className="text-gray-400 text-xs">{topup.userEmail}</p>
+                        <p className="text-gray-400 text-xs">{topup.userCode}</p>
                       </div>
                     </div>
                     {getStatusBadge(topup.status)}
@@ -513,13 +528,16 @@ const TopupsManagement: React.FC = () => {
                     onClick={() => handleSort('userName')}
                   >
                     <div className="flex items-center space-x-1">
-                      <span>User</span>
+                      <span>User Name</span>
                       {sortBy === 'userName' && (
                         <span className="text-purple-400">
                           {sortOrder === 'asc' ? '↑' : '↓'}
                         </span>
                       )}
                     </div>
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    User ID
                   </th>
                   <th 
                     className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
@@ -554,7 +572,7 @@ const TopupsManagement: React.FC = () => {
                     </div>
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Payment Info
+                    Transaction Hash
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Actions
@@ -564,7 +582,7 @@ const TopupsManagement: React.FC = () => {
               <tbody className="divide-y divide-white/5">
                 {currentTopups.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
+                    <td colSpan={4} className="px-6 py-12 text-center">
                       <div className="w-16 h-16 bg-gray-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
                         <CreditCardIcon className="h-8 w-8 text-gray-400" />
                       </div>
@@ -591,52 +609,32 @@ const TopupsManagement: React.FC = () => {
                             <div className="text-sm font-medium text-white">
                               {topup.userName || 'Unknown User'}
                             </div>
-                            <div className="text-sm text-gray-400">
-                              {topup.userEmail}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              ID: {topup.userId.substring(0, 8)}...
-                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-white">
-                          ${topup.amount.toLocaleString()}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-400">
+                          {topup.userCode || 'N/A'}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        {getRankBadge(topup.rank)}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getRankBadge(topup.userRank || '')}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(topup.status)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-300">
-                        {topup.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {topup.createdAt?.toDate().toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-300">
-                          <div className="flex items-center space-x-1">
-                            <CreditCardIcon className="h-4 w-4" />
-                            <span>{topup.paymentMethod || 'N/A'}</span>
-                          </div>
-                          {topup.transactionId && (
-                            <div className="text-xs text-gray-400 mt-1">
-                              TX: {topup.transactionId.substring(0, 10)}...
-                            </div>
-                          )}
-                        </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {topup.transactionId ? `${topup.transactionId.substring(0, 10)}...` : 'N/A'}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex space-x-2">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
                           <button
-                            onClick={() => {
-                              setSelectedTopup(topup);
-                              setShowDetailsModal(true);
-                            }}
-                            className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded-lg text-xs transition-colors flex items-center gap-1"
+                            onClick={() => handleViewDetails(topup)}
+                            className="text-indigo-400 hover:text-indigo-300"
                           >
-                            <EyeIcon className="h-3 w-3" />
                             View
                           </button>
                           {topup.status === 'pending' && (
@@ -646,9 +644,8 @@ const TopupsManagement: React.FC = () => {
                                   setSelectedTopup(topup);
                                   setShowApproveModal(true);
                                 }}
-                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-xs transition-colors flex items-center gap-1"
+                                className="text-green-500 hover:text-green-400"
                               >
-                                <CheckCircleIcon className="h-3 w-3" />
                                 Approve
                               </button>
                               <button
@@ -656,9 +653,8 @@ const TopupsManagement: React.FC = () => {
                                   setSelectedTopup(topup);
                                   setShowRejectModal(true);
                                 }}
-                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs transition-colors flex items-center gap-1"
+                                className="text-red-500 hover:text-red-400"
                               >
-                                <XCircleIcon className="h-3 w-3" />
                                 Reject
                               </button>
                             </>
@@ -666,6 +662,7 @@ const TopupsManagement: React.FC = () => {
                         </div>
                       </td>
                     </tr>
+
                   ))
                 )}
               </tbody>
@@ -748,18 +745,16 @@ const TopupsManagement: React.FC = () => {
                     <label className="text-sm text-gray-400">Name</label>
                     <p className="text-white font-medium">{selectedTopup.userName || 'N/A'}</p>
                   </div>
-                  <div>
-                    <label className="text-sm text-gray-400">Email</label>
-                    <p className="text-white font-medium">{selectedTopup.userEmail || 'N/A'}</p>
-                  </div>
+
                   <div>
                     <label className="text-sm text-gray-400">User ID</label>
-                    <p className="text-white font-mono text-sm">{selectedTopup.userId}</p>
+                    <p className="text-white font-mono text-sm">{selectedTopup.userCode || 'N/A'}</p>
                   </div>
                   <div>
-                    <label className="text-sm text-gray-400">Current Rank</label>
-                    <div className="mt-1">{getRankBadge(selectedTopup.rank)}</div>
+                    <label className="text-sm text-gray-400">Rank</label>
+                    <div className="mt-1">{getRankBadge(selectedTopup.userRank || 'N/A')}</div>
                   </div>
+
                 </div>
               </div>
 
@@ -778,14 +773,24 @@ const TopupsManagement: React.FC = () => {
                     <label className="text-sm text-gray-400">Status</label>
                     <div className="mt-1">{getStatusBadge(selectedTopup.status)}</div>
                   </div>
-                  <div>
-                    <label className="text-sm text-gray-400">Payment Method</label>
-                    <p className="text-white font-medium">{selectedTopup.paymentMethod || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-400">Transaction ID</label>
-                    <p className="text-white font-mono text-sm break-all">{selectedTopup.transactionId || 'N/A'}</p>
-                  </div>
+
+
+                  {selectedTopup.txHash && (
+                    <div>
+                      <label className="text-sm text-gray-400">Transaction Hash</label>
+                      <div className="flex items-center gap-2">
+                        <p className="text-white font-mono text-sm break-all">{selectedTopup.txHash}</p>
+                        <button 
+                          onClick={handleCopyTxHash}
+                          className="text-gray-400 hover:text-white transition-colors duration-200"
+                          title="Copy Transaction Hash"
+                        >
+                          <ClipboardDocumentIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                      {copiedTxHash && <span className="text-green-500 text-xs mt-1">Copied!</span>}
+                    </div>
+                  )}
                   <div>
                     <label className="text-sm text-gray-400">Created Date</label>
                     <p className="text-white font-medium">{selectedTopup.createdAt?.toDate?.()?.toLocaleString() || 'N/A'}</p>
@@ -1027,9 +1032,7 @@ const TopupsManagement: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Date:</span>
-                  <span className="text-white font-medium">
-                    {selectedTopup.createdAt?.toDate?.()?.toLocaleDateString()}
-                  </span>
+                  <span className="text-white">{selectedTopup.createdAt?.toDate().toLocaleDateString()}</span>
                 </div>
               </div>
             </div>

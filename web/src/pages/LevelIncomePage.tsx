@@ -40,7 +40,7 @@ interface UserData {
 }
 
 const LevelIncomePage: React.FC = () => {
-  const { user, userData } = useAuth();
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState<IncomeTransaction[]>([]);
   const [userNames, setUserNames] = useState<{ [key: string]: UserData }>({});
   const [loading, setLoading] = useState(true);
@@ -199,10 +199,6 @@ const LevelIncomePage: React.FC = () => {
     totalReLevelIncome: transactions
       .filter(t => t.type === 'Re-Level Income' && t.status === 'approved')
       .reduce((sum, t) => sum + t.amount, 0),
-    availableBalance: userData?.availableBalance || 0,
-    pendingAmount: transactions
-      .filter(t => t.status === 'pending')
-      .reduce((sum, t) => sum + t.amount, 0)
   };
 
   // Copy to clipboard function
@@ -303,15 +299,7 @@ const LevelIncomePage: React.FC = () => {
             <div className="text-white text-2xl font-bold">${summaryData.totalReLevelIncome.toFixed(2)}</div>
           </div>
           
-          <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-2xl p-6 shadow-md">
-            <div className="text-green-100 text-sm font-medium">Available Balance</div>
-            <div className="text-white text-2xl font-bold">${summaryData.availableBalance.toFixed(2)}</div>
-          </div>
-          
-          <div className="bg-gradient-to-r from-yellow-600 to-yellow-700 rounded-2xl p-6 shadow-md">
-            <div className="text-yellow-100 text-sm font-medium">Pending Amount</div>
-            <div className="text-white text-2xl font-bold">${summaryData.pendingAmount.toFixed(2)}</div>
-          </div>
+
         </div>
 
         {/* Level Percentages Info */}

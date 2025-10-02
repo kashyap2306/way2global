@@ -3,6 +3,7 @@
  */
 
 import * as admin from 'firebase-admin';
+admin.initializeApp();
 import { collections, isDevelopment } from '../config';
 
 // Log levels

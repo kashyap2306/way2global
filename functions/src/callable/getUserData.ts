@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+admin.initializeApp();
 import { logger, LogCategory } from '../utils/logger';
 import { collections } from '../config';
 

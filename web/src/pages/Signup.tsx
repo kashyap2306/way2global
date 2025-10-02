@@ -488,13 +488,14 @@ const Signup: React.FC = () => {
             {/* Sponsor ID (Optional) */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 uppercase tracking-wide">
-                Sponsor ID <span className="text-slate-500">(Optional)</span>
+                Sponsor ID
               </label>
               <div className="relative">
                 <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
                   name="sponsorId"
+                  required
                   className={`w-full pl-10 pr-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all duration-300 ${
                     (searchParams.get('ref') || searchParams.get('referral')) ? 'cursor-not-allowed opacity-75' : ''
                   }`}

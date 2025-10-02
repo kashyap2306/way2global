@@ -3,6 +3,7 @@
  */
 
 import * as admin from 'firebase-admin';
+admin.initializeApp();
 import { collections } from '../config';
 import { IncomePool, PlatformSettings } from '../types';
 import { logger, LogCategory } from '../utils/logger';

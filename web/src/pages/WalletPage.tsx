@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -17,6 +17,10 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
 } from '@heroicons/react/24/outline';
+import { getFunctions } from 'firebase/functions';
+
+const functionsInstance = getFunctions();
+
 
 interface WalletData {
   availableBalance: number;
@@ -60,6 +64,81 @@ const WalletPage: React.FC = () => {
   });
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Fund Transfer states
+  const [recipientUserCode, setRecipientUserCode] = useState('');
+  const [transferAmount, setTransferAmount] = useState<number | string>('');
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [showFundTransfer, setShowFundTransfer] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
+
+
+
+   const { currentUser, loading: authLoading, error: authError } = useAuth();
+
+  
+   // Handle fund transfer
+  const handleFundTransfer = useCallback(async () => {
+    if (!userData?.uid) {
+      setTransferError('You must be logged in to transfer funds.');
+      return;
+    }
+
+    if (!recipientUserCode) {
+      setTransferError('Please enter a recipient user code.');
+      return;
+    }
+
+    const amount = parseFloat(transferAmount as string);
+    if (isNaN(amount) || amount <= 0) {
+      setTransferError('Please enter a valid amount to transfer.');
+      return;
+    }
+
+    if (amount > walletData.lockedBalance) {
+      setTransferError('Insufficient funding wallet balance.');
+      return;
+    }
+
+    setIsTransferring(true);
+    setTransferError(null);
+    setTransferSuccess(null);
+
+    try {
+      const idToken = await currentUser?.getIdToken();
+      if (!idToken) {
+        throw new Error('Authentication token not found.');
+      }
+
+      const response = await fetch('https://us-central1-way-to-globe.cloudfunctions.net/transferFunds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ data: { recipientUserCode, amount } }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.data?.message || 'Failed to transfer funds.');
+      }
+
+      setTransferSuccess(result.data?.message || 'Funds transferred successfully!');
+      setRecipientUserCode('');
+      setTransferAmount('');
+    } catch (error: any) {
+      console.error('Error transferring funds:', error);
+      setTransferError(error.message || 'An unexpected error occurred during fund transfer.');
+    }
+    finally {
+      setIsTransferring(false);
+    }
+  }, [userData?.uid, recipientUserCode, transferAmount, walletData.lockedBalance, currentUser]);
+
+
 
   // Format currency to USDT
   const formatUSDT = (amount: number | undefined | null): string => {
@@ -239,13 +318,15 @@ const WalletPage: React.FC = () => {
     );
     unsubscribers.push(recentTransactionsUnsubscribe);
 
-    // Cleanup function
-    return () => {
-      unsubscribers.forEach(unsubscribe => unsubscribe());
-    };
-  }, [userData?.uid]);
 
-  if (loading) {
+
+     // Cleanup function
+     return () => {
+       unsubscribers.forEach(unsubscribe => unsubscribe());
+     };
+   }, [userData?.uid]);
+
+   if (loading) {
     return (
       <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
         <div className="animate-pulse">
@@ -313,12 +394,14 @@ const WalletPage: React.FC = () => {
                 </button>
               </div>
 
+
+
               {/* Decorative elements */}
               <div className="absolute top-3 right-3 w-12 h-12 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-xl"></div>
             </div>
           </div>
 
-          {/* Locked Balance Card */}
+          {/* Funding Wallet Card */}
           <div className="relative">
             {/* Background glow effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-3xl blur-xl"></div>
@@ -332,7 +415,7 @@ const WalletPage: React.FC = () => {
                     <WalletIcon className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-white">Locked Balance</h2>
+                    <h2 className="text-lg font-semibold text-white">Funding Wallet</h2>
                     <p className="text-slate-400 text-xs">Pool income earned</p>
                   </div>
                 </div>
@@ -349,32 +432,60 @@ const WalletPage: React.FC = () => {
 
               {/* Claim button - only show if eligible */}
               <div className="flex justify-center">
-                {walletData.claimEligible && walletData.directReferrals >= 2 ? (
-                  <button
-                    onClick={handleClaimIncome}
-                    className="group relative bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <ArrowDownIcon className="h-5 w-5 transform group-hover:translate-y-1 transition-transform" />
-                      <span>Claim Income</span>
-                    </div>
-                  </button>
-                ) : (
-                  <div className="text-center">
-                    <div className="text-slate-400 text-sm mb-2">
-                      {walletData.directReferrals < 2 
-                        ? `Need ${2 - walletData.directReferrals} more direct referrals`
-                        : 'No claimable income'
-                      }
-                    </div>
-                    <div className="text-slate-500 text-xs">
-                      Direct referrals: {walletData.directReferrals}/2
-                    </div>
-                  </div>
-                )}
+
               </div>
 
-              {/* Decorative elements */}
+              <div className="mt-8">
+                <button
+                  onClick={() => setShowFundTransfer(!showFundTransfer)}
+                  className="w-full py-3 px-6 bg-green-600 hover:bg-green-700 rounded-xl text-white font-bold text-lg transition-colors duration-200"
+                >
+                  Fund Transfer
+                </button>
+              </div>
+
+              {showFundTransfer && (
+                <div className="mt-8 p-6 bg-slate-800 rounded-xl shadow-lg">
+                  <h3 className="text-xl font-bold text-white mb-4">Fund Transfer</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="recipientUserCode" className="block text-sm font-medium text-slate-300 mb-1">Recipient User Code</label>
+                    <input
+                      type="text"
+                      id="recipientUserCode"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500"
+                      placeholder="Enter recipient's user code"
+                      value={recipientUserCode}
+                      onChange={(e) => setRecipientUserCode(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="transferAmount" className="block text-sm font-medium text-slate-300 mb-1">Amount (USDT)</label>
+                    <input
+                      type="number"
+                      id="transferAmount"
+                      className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-green-500 focus:border-green-500"
+                      placeholder="Enter amount to transfer"
+                      value={transferAmount}
+                      onChange={(e) => setTransferAmount(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    onClick={handleFundTransfer}
+                    disabled={isTransferring}
+                    className="w-full group relative bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isTransferring ? 'Transferring...' : 'Transfer Funds'}
+                  </button>
+                  {transferError && <p className="text-red-500 text-sm mt-2">Error: {transferError}</p>}
+                  {transferSuccess && <p className="text-green-500 text-sm mt-2">{transferSuccess}</p>}
+                </div>
+              </div>
+            )}
+
+
+
+            {/* Decorative elements */}
               <div className="absolute top-3 right-3 w-12 h-12 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-full blur-xl"></div>
             </div>
           </div>
@@ -382,15 +493,7 @@ const WalletPage: React.FC = () => {
 
         {/* Quick Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-br from-slate-800/80 to-blue-900/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="p-2 bg-green-500/20 rounded-xl">
-                <ArrowDownIcon className="h-5 w-5 text-green-400" />
-              </div>
-              <span className="text-slate-300 text-sm">Pool Income Earned</span>
-            </div>
-            <div className="text-2xl font-bold text-white">{formatUSDT(walletData.poolIncomeEarned)}</div>
-          </div>
+
           
           <div className="bg-gradient-to-br from-slate-800/80 to-purple-900/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
             <div className="flex items-center space-x-3 mb-3">
@@ -423,7 +526,7 @@ const WalletPage: React.FC = () => {
               <span className="font-semibold text-white text-sm sm:text-base">{formatUSDT(walletData.availableBalance)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-slate-700/50">
-              <span className="text-slate-300 text-sm sm:text-base">Locked Balance:</span>
+              <span className="text-slate-300 text-sm sm:text-base">Funding Wallet:</span>
               <span className="font-semibold text-white text-sm sm:text-base">{formatUSDT(walletData.lockedBalance)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-slate-700/50">

@@ -27,6 +27,8 @@ import PlatformSettings from './pages/admin/PlatformSettings';
 import SupportTickets from './pages/admin/SupportTickets';
 import GlobalIncomeManagement from './pages/admin/GlobalIncomeManagement';
 
+import FundRequestsManagement from './pages/admin/FundRequestsManagement';
+
 import WalletPage from './pages/WalletPage';
 import WithdrawalPage from './pages/WithdrawalPage';
 import ProfilePage from './pages/ProfilePage';
@@ -73,7 +75,11 @@ const AppContent: React.FC = () => {
       <Route 
         path="/topup" 
         element={
-          currentUser ? <TopupPage /> : <Navigate to="/login" replace />
+          <ProtectedRoute>
+            <DashboardLayout>
+              <TopupPage />
+            </DashboardLayout>
+          </ProtectedRoute>
         } 
       />
       
@@ -192,6 +198,7 @@ const AppContent: React.FC = () => {
         <Route path="global-income" element={<GlobalIncomeManagement />} />
         <Route path="settings" element={<PlatformSettings />} />
         <Route path="settings-advanced" element={<AdminSettings />} />
+        <Route path="fund-requests" element={<FundRequestsManagement />} />
       </Route>
       
       {/* Root Route */}

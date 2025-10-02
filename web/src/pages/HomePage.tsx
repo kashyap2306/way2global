@@ -34,13 +34,17 @@ const HomePage: React.FC = () => {
   const [globalPoolStatus, setGlobalPoolStatus] = useState<GlobalPoolStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  console.log('HomePage: Initial render. currentUser:', currentUser, 'uid:', uid);
+
   const fetchUserData = useCallback(async () => {
+    console.log('HomePage: fetchUserData called.');
     try {
       // Use UID from params if available, otherwise use current user's UID
       const targetUid = uid || currentUser?.uid;
       if (!targetUid) {
         setError("User not logged in or UID not provided.");
         setLoading(false);
+        console.log('HomePage: No targetUid. Setting error and loading to false.');
         return;
       }
 
@@ -50,6 +54,7 @@ const HomePage: React.FC = () => {
       if (userSnap.exists()) {
         const data = userSnap.data() as UserData;
         setUserData(data);
+        console.log('HomePage: User data fetched:', data);
 
         const baseUrl = window.location.origin;
         setReferralLink(`${baseUrl}/signup?ref=${data.userCode}`);
@@ -60,22 +65,29 @@ const HomePage: React.FC = () => {
         }
       } else {
         setError("User data not found.");
+        console.log('HomePage: User data not found for UID:', targetUid);
       }
     } catch (err: any) {
       console.error('Error fetching user data:', err);
       setError(err.message || "Failed to fetch user data.");
     } finally {
       setLoading(false);
+      console.log('HomePage: fetchUserData finished. Loading set to false.');
     }
   }, [currentUser?.uid, uid]);
 
   useEffect(() => {
+    console.log('HomePage: useEffect triggered. currentUser:', currentUser, 'uid:', uid);
     if (currentUser || uid) {
       fetchUserData();
+    } else {
+      console.log('HomePage: useEffect - No currentUser or uid. Not fetching data.');
+      setLoading(false); // Ensure loading is false if no user is present
     }
-  }, [currentUser?.uid, uid]);
+  }, [currentUser?.uid, uid, fetchUserData]);
 
   if (!currentUser) {
+    console.log('HomePage: Rendering !currentUser loading state.');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -89,6 +101,7 @@ const HomePage: React.FC = () => {
   }
 
   if (loading) {
+    console.log('HomePage: Rendering local loading state.');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -102,6 +115,7 @@ const HomePage: React.FC = () => {
   }
 
   if (error) {
+    console.log('HomePage: Rendering error state. Error:', error);
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -119,6 +133,7 @@ const HomePage: React.FC = () => {
   }
 
   if (!userData) {
+    console.log('HomePage: Rendering !userData state.');
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -135,6 +150,7 @@ const HomePage: React.FC = () => {
     );
   }
 
+  console.log('HomePage: Rendering main content.');
   return (
     <div className="space-y-4 sm:space-y-6 px-0 sm:px-4">
       {/* User Details */}

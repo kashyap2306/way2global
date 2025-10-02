@@ -1,17 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  updateDoc, 
-  query, 
-  where, 
-  orderBy, 
-  limit,
-  Timestamp,
-  writeBatch,
-  increment
-} from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, orderBy, limit, Timestamp, writeBatch, increment, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { auditService } from './auditService';
 
@@ -51,6 +38,7 @@ export interface WithdrawalRequest {
 export interface TopupRequest {
   id: string;
   userId: string;
+  userCode?: string;
   userEmail: string;
   userName: string;
   amount: number;
@@ -61,6 +49,8 @@ export interface TopupRequest {
   processedBy?: string;
   paymentMethod?: string;
   transactionId?: string;
+  txHash?: string;
+  userRank?: string;
 }
 
 export interface AuditLog {
@@ -108,7 +98,7 @@ class AdminService {
         .reduce((sum, w) => sum + (w.amount || 0), 0);
 
       // Get topups
-      const topupsSnapshot = await getDocs(collection(db, 'transactions'));
+      const topupsSnapshot = await getDocs(collection(db, 'topups'));
       const topups = topupsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
       const pendingTopups = topups.filter(t => t.type === 'topup' && t.status === 'pending').length;
 
@@ -342,16 +332,24 @@ class AdminService {
   async getAllTopups(statusFilter?: string): Promise<TopupRequest[]> {
     try {
       let q = query(
-        collection(db, 'transactions'), 
-        where('type', '==', 'topup'),
+        collection(db, 'topups'), 
         orderBy('createdAt', 'desc')
       );
       
       const snapshot = await getDocs(q);
-      let topups = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as TopupRequest[];
+      let topups = await Promise.all(snapshot.docs.map(async topupDoc => {
+        const topupData = topupDoc.data() as TopupRequest;
+        const userDoc = await getDoc(doc(db, 'users', topupData.userId));
+        const userData = userDoc.data();
+        return {
+          ...topupData,
+          id: topupDoc.id, // Ensure id is explicitly included
+          userName: userData?.displayName,
+          userCode: userData?.userCode,
+          userStatus: userData?.status,
+          userRank: userData?.currentRank
+        };
+      }));
 
       if (statusFilter && statusFilter !== 'all') {
         topups = topups.filter(t => t.status === statusFilter);
@@ -369,7 +367,7 @@ class AdminService {
       const batch = writeBatch(db);
       
       // Get topup details
-      const topupRef = doc(db, 'transactions', topupId);
+      const topupRef = doc(db, 'topups', topupId);
       const topupDoc = await getDoc(topupRef);
       
       if (!topupDoc.exists()) {
@@ -390,12 +388,24 @@ class AdminService {
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists()) {
-        const userData = userDoc.data();
         batch.update(userRef, {
-          isActive: true,
-          activationAmount: topup.amount,
-          activationDate: Timestamp.now(),
-          balance: (userData.balance || 0) + topup.amount
+          balance: increment(topup.amount),
+          lockedBalance: increment(topup.amount)
+        });
+
+        // Record the transaction
+        const transactionRef = doc(collection(db, 'transactions'));
+        batch.set(transactionRef, {
+          id: transactionRef.id,
+          userId: topup.userId,
+          type: 'topup',
+          amount: topup.amount,
+          status: 'completed',
+          createdAt: Timestamp.now(),
+          transactionId: topup.transactionId || null,
+          paymentMethod: topup.paymentMethod || null,
+          userName: topup.userName || null,
+          userCode: topup.userCode || null,
         });
       }
 
@@ -421,7 +431,7 @@ class AdminService {
    */
   async rejectTopup(topupId: string, reason: string, adminId: string, adminEmail: string): Promise<void> {
     try {
-      const topupRef = doc(db, 'topupRequests', topupId);
+      const topupRef = doc(db, 'topups', topupId);
       const topupDoc = await getDoc(topupRef);
       
       if (!topupDoc.exists()) {

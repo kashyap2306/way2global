@@ -25,8 +25,9 @@ const DashboardCards: React.FC = () => {
     levelIncome: 0,
     directReferralCount: 0,
     totalTeamCount: 0,
-    walletBalance: 0,
+    availableBalance: 0,
     totalWithdrawals: 0,
+    lockedBalance: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,8 +58,8 @@ const DashboardCards: React.FC = () => {
     },
     {
       title: 'Wallet Balance',
-      value: dashboardData.walletBalance,
-      key: 'walletBalance',
+      value: dashboardData.availableBalance,
+      key: 'availableBalance',
       icon: '💳',
       color: getDashboardCardColor(3)
     },
@@ -96,7 +97,15 @@ const DashboardCards: React.FC = () => {
       key: 'totalWithdrawals',
       icon: '💸',
       color: getDashboardCardColor(8)
-    }
+    },
+    {
+      title: 'Funding Wallet',
+      value: dashboardData.lockedBalance,
+      key: 'lockedBalance',
+      icon: '💰',
+      color: getDashboardCardColor(9)
+    },
+
   ];
 
   // Fetch dashboard data with real-time updates
@@ -183,41 +192,52 @@ const DashboardCards: React.FC = () => {
     return <LoadingSkeleton />;
   }
 
+  if (!user) {
+    return null; // Or a loading spinner
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {cards.map((card, index) => (
         <div
           key={card.key}
           className={`
-            bg-gradient-to-br ${card.color} 
-            rounded-xl p-6 text-white shadow-lg 
-            hover:shadow-xl hover:scale-105 
+            relative bg-gradient-to-br ${card.color} 
+            rounded-xl p-6 text-white 
+            shadow-3xl shadow-${card.color.split('-')[1]}-700/60 
+            hover:shadow-4xl hover:scale-105 
             transition-all duration-300 ease-in-out
             border border-gray-700/30
             backdrop-blur-sm
+            overflow-hidden
+            group
           `}
           style={{
             animationDelay: `${index * 100}ms`,
             animation: 'fadeInUp 0.6s ease-out forwards'
           }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-3xl opacity-80">{card.icon}</div>
-            <div className="text-right">
-              <div className="text-xs opacity-70 uppercase tracking-wide font-medium">
-                {card.title}
-              </div>
+          {/* Neon border effect */}
+          <div className={`
+            absolute inset-0 rounded-xl 
+            border-2 border-transparent 
+            group-hover:border-${card.color.split('-')[1]}-400 
+            group-hover:shadow-lg group-hover:shadow-${card.color.split('-')[1]}-500/50
+            transition-all duration-300 ease-in-out
+            pointer-events-none
+          `}></div>
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="text-4xl mb-2 opacity-90">{card.icon}</div>
+            <div className="text-xs opacity-70 uppercase tracking-wide font-medium mb-1">
+              {card.title}
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold mb-2">
               {card.key === 'directReferralCount' || card.key === 'totalTeamCount' 
                 ? card.value.toLocaleString()
                 : formatCurrency(card.value)
               }
             </div>
-            <div className="text-xs opacity-70">
+            <div className="text-xs opacity-60">
               Real-time data
             </div>
           </div>

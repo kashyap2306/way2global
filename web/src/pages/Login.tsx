@@ -76,7 +76,6 @@ const Login: React.FC = () => {
       
       // Navigation will be handled by the useEffect in App.tsx based on user data
       // which will check profile completeness and redirect accordingly
-      navigate('/dashboard');
       
     } catch (error: any) {
       console.error('Login error:', error);

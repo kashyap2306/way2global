@@ -4,10 +4,12 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/',
   plugins: [
     react({
       babel: {
         plugins: [['babel-plugin-react-compiler']],
+        presets: ['@babel/preset-typescript'],
       },
     }),
   ],
@@ -21,11 +23,11 @@ export default defineConfig({
     }
   },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
     },
-  },
-  css: {
-    postcss: './postcss.config.js',
-  }
+    optimizeDeps: {
+      exclude: ['firebase-admin', 'firebase-admin/firestore', 'firebase-functions'],
+    }
 })

@@ -20,8 +20,18 @@ export interface DashboardData {
   levelIncome: number;
   directReferralCount: number;
   totalTeamCount: number;
-  walletBalance: number;
+  availableBalance: number;
   totalWithdrawals: number;
+  lockedBalance: number;
+  autopoolPosition?: number; // New field for autopool position
+  autopoolEarnings?: number; // New field for autopool earnings
+}
+
+// User data interface for internal use
+interface UserData {
+  availableBalance: number; // Changed from 'balance' to 'availableBalance'
+  lockedBalance: number;
+  referrals: string[];
 }
 
 // Income type mapping
@@ -54,18 +64,29 @@ export class DashboardService {
         levelIncome: 0,
         directReferralCount: 0,
         totalTeamCount: 0,
-        walletBalance: 0,
+        availableBalance: 0,
         totalWithdrawals: 0,
+        lockedBalance: 0,
+        autopoolPosition: 0, // Initialize new field
+        autopoolEarnings: 0, // Initialize new field
       };
 
       // Fetch user basic data
       const userData = await this.fetchUserData(userId);
-      data.walletBalance = userData.balance || 0;
+      data.availableBalance = userData.availableBalance || 0;
+      data.lockedBalance = userData.lockedBalance || 0; // Initialize from user doc
+
+      // Calculate locked balance from income pools
+      data.lockedBalance += await this.fetchIncomePoolsLockedBalance(userId);
       data.directReferralCount = userData.referrals?.length || 0;
 
       // Fetch income data
       const incomeData = await this.fetchIncomeData(userId);
       Object.assign(data, incomeData);
+
+      // Fetch autopool data
+      const autopoolData = await this.fetchAutopoolData(userId);
+      Object.assign(data, autopoolData);
 
       // Fetch withdrawal data
       data.totalWithdrawals = await this.fetchWithdrawalData(userId);
@@ -80,6 +101,17 @@ export class DashboardService {
     }
   }
 
+  private async fetchIncomePoolsLockedBalance(userId: string): Promise<number> {
+    const incomePoolsRef = collection(db, 'incomePools');
+    const q = query(incomePoolsRef, where('userId', '==', userId), where('status', '==', 'active'));
+    const querySnapshot = await getDocs(q);
+    let lockedBalance = 0;
+    querySnapshot.forEach((doc) => {
+      lockedBalance += doc.data().amount || 0;
+    });
+    return lockedBalance;
+  }
+
   /**
    * Set up real-time listeners for dashboard data
    */
@@ -91,11 +123,14 @@ export class DashboardService {
     // User data listener
     const userUnsubscribe = onSnapshot(
       doc(db, 'users', userId),
-      (doc) => {
+      async (doc) => {
         if (doc.exists()) {
-          const userData = doc.data();
+          const userData = doc.data() as UserData;
+          let lockedBalance = userData.lockedBalance || 0;
+          lockedBalance += await this.fetchIncomePoolsLockedBalance(userId);
           onUpdate({
-            walletBalance: userData.balance || 0,
+            availableBalance: userData.availableBalance || 0,
+            lockedBalance: lockedBalance,
             directReferralCount: userData.referrals?.length || 0,
           });
         }
@@ -134,7 +169,39 @@ export class DashboardService {
       onError
     );
 
-    this.unsubscribers = [userUnsubscribe, incomeUnsubscribe, withdrawalUnsubscribe];
+    // Income pools listener for locked balance
+    const incomePoolsUnsubscribe = onSnapshot(
+      query(collection(db, 'incomePools'), where('userId', '==', userId), where('status', '==', 'active')),
+      async (snapshot) => {
+        let lockedBalanceFromPools = 0;
+        snapshot.forEach((doc) => {
+          lockedBalanceFromPools += doc.data().amount || 0;
+        });
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        const userData = userDoc.data() as UserData;
+        onUpdate({
+          lockedBalance: (userData.lockedBalance || 0) + lockedBalanceFromPools,
+        });
+      },
+      onError
+    );
+
+    // Autopool data listener
+    const autopoolUnsubscribe = onSnapshot(
+      doc(db, 'autopool', userId),
+      (doc) => {
+        if (doc.exists()) {
+          const autopoolData = doc.data();
+          onUpdate({
+            autopoolPosition: autopoolData.position || 0,
+            autopoolEarnings: autopoolData.totalEarnings || 0,
+          });
+        }
+      },
+      onError
+    );
+
+    this.unsubscribers = [userUnsubscribe, incomeUnsubscribe, withdrawalUnsubscribe, incomePoolsUnsubscribe, autopoolUnsubscribe];
 
     // Return cleanup function
     return () => {
@@ -305,6 +372,25 @@ export class DashboardService {
       }
     });
     this.unsubscribers = [];
+  }
+
+  private async fetchAutopoolData(userId: string): Promise<Partial<DashboardData>> {
+    try {
+      const autopoolEntryRef = doc(db, 'autopool', userId);
+      const autopoolDoc = await getDoc(autopoolEntryRef);
+
+      if (autopoolDoc.exists()) {
+        const autopoolData = autopoolDoc.data();
+        return {
+          autopoolPosition: autopoolData.position || 0,
+          autopoolEarnings: autopoolData.totalEarnings || 0, // Assuming totalEarnings field in autopool entry
+        };
+      }
+      return { autopoolPosition: 0, autopoolEarnings: 0 };
+    } catch (error) {
+      console.error('Error fetching autopool data:', error);
+      return { autopoolPosition: 0, autopoolEarnings: 0 };
+    }
   }
 }
 

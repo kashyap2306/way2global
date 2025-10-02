@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
+import ActivationPopup from '../ActivationPopup';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -8,6 +10,7 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { showActivationPopup, setShowActivationPopup } = useAuth();
 
   const handleMenuToggle = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -33,14 +36,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         />
 
         {/* Main content - Adjusted for fixed sidebar */}
-        <div className="flex-1 w-full lg:ml-64">
+        <div className={`flex-1 w-full lg:ml-64 ${showActivationPopup ? 'pointer-events-none blur-sm' : ''}`}>
           <main className="pt-16 w-full">
-            <div className="w-full max-w-none px-0 sm:px-4 py-6">
+            <div className="w-full max-w-none px-0 py-6">
               {children}
             </div>
           </main>
         </div>
       </div>
+
+      <ActivationPopup
+        isOpen={showActivationPopup}
+        onClose={() => setShowActivationPopup(false)}
+      />
     </div>
   );
 };

@@ -94,6 +94,39 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    // Funding Wallet Requests Collection
+    match /users/{userId}/fundingWalletRequests/{requestId} {
+      // Read: User can read own requests, admins can read all
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+
+      // Create: Users can create fund requests with validation
+      allow create: if isAuthenticated()
+        && isOwner(userId)
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.currency == 'USDT'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.createdAt is timestamp;
+
+      // Update: Only admins can update requests (approve/reject)
+      allow update: if isAdmin()
+        && (
+          // Approving or rejecting request
+          (request.resource.data.status == 'approved' || request.resource.data.status == 'rejected')
+          && request.resource.data.processedAt is timestamp
+          && request.resource.data.processedBy == request.auth.uid
+          // Ensure other fields are not modified
+          && request.resource.data.amount == resource.data.amount
+          && request.resource.data.currency == resource.data.currency
+          && request.resource.data.requestedBy == resource.data.requestedBy
+          && request.resource.data.createdAt == resource.data.createdAt
+        );
+
+      // Delete: Only admins can delete requests
+      allow delete: if isAdmin();
+    }
+
     // Default deny for all other collections
     match /{document=**} {
       allow read, write: if false;

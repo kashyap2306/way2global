@@ -1,8 +1,4 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-
-// Initialize Firebase Admin SDK
-admin.initializeApp();
 
 // Export HTTP handlers
 export { authHandlers } from './handlers/authHandlers';
@@ -17,6 +13,11 @@ export { createActivation } from './callable/createActivation';
 export { requestWithdrawal } from './callable/requestWithdrawal';
 export { claimPayout } from './callable/claimPayout';
 export { seedDatabase } from './callable/seedDatabase';
+export { transferFunds } from './callable/transferFunds';
+export { createFundRequest } from './callable/createFundRequest';
+export { approveFundRequest } from './callable/approveFundRequest';
+export { rejectFundRequest } from './callable/rejectFundRequest';
+export * from './callable/initializeAutopool';
 
 // Export Firestore triggers
 export { onUserCreated } from './triggers/onUserCreated';

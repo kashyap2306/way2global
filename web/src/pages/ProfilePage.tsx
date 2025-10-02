@@ -269,8 +269,8 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 w-full">
-      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 w-full border-red-500 border-2">
+      <div className="w-full py-6">
         <div className="space-y-6">
           {/* Header */}
           <div className="text-center mb-6">

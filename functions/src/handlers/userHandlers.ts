@@ -5,6 +5,7 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+admin.initializeApp();
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';

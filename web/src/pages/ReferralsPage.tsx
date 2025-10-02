@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { formatCurrency } from '../utils/formatters';
+// ... existing code ...
 import { 
   ClipboardDocumentIcon as CopyIcon, 
   CheckIcon, 
   UserGroupIcon, 
   ChartBarIcon, 
-  CurrencyDollarIcon,
+// ... existing code ...
   ChevronDownIcon,
   ChevronRightIcon,
   CalendarIcon,
@@ -55,9 +55,6 @@ interface TeamStats {
   totalReferrals: number;
   activeMembers: number;
   totalTeamSize: number;
-  referralIncome: number;
-  levelIncome: number;
-  totalIncome: number;
 }
 
 const ReferralsPage: React.FC = () => {
@@ -72,9 +69,6 @@ const ReferralsPage: React.FC = () => {
     totalReferrals: 0,
     activeMembers: 0,
     totalTeamSize: 0,
-    referralIncome: 0,
-    levelIncome: 0,
-    totalIncome: 0
   });
 
   useEffect(() => {
@@ -393,38 +387,7 @@ const ReferralsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Referral Income */}
-        <div className="bg-gradient-to-br from-teal-600 to-teal-700 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-teal-100 text-sm font-medium">Referral Income</p>
-              <p className="text-2xl font-bold">{formatCurrency(teamStats.referralIncome)}</p>
-            </div>
-            <CurrencyDollarIcon className="w-8 h-8 text-teal-200" />
-          </div>
-        </div>
 
-        {/* Level Income */}
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-indigo-100 text-sm font-medium">Level Income</p>
-              <p className="text-2xl font-bold">{formatCurrency(teamStats.levelIncome)}</p>
-            </div>
-            <ChartBarIcon className="w-8 h-8 text-indigo-200" />
-          </div>
-        </div>
-
-        {/* Total Income */}
-        <div className="bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-100 text-sm font-medium">Total Income</p>
-              <p className="text-2xl font-bold">{formatCurrency(teamStats.totalIncome)}</p>
-            </div>
-            <CurrencyDollarIcon className="w-8 h-8 text-orange-200" />
-          </div>
-        </div>
       </div>
 
       {/* Referral Link */}

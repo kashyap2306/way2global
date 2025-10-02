@@ -51,6 +51,13 @@ const AdminLayout: React.FC = () => {
       badge: '5' // Example pending count
     },
     {
+      name: 'Fund Requests',
+      href: '/admin/fund-requests',
+      icon: CreditCardIcon,
+      current: location.pathname === '/admin/fund-requests',
+      badge: null
+    },
+    {
       name: 'Support Tickets',
       href: '/admin/support',
       icon: TicketIcon,

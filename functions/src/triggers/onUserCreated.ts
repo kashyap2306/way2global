@@ -4,55 +4,56 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { createLogger, LogCategory } from '../utils/logger';
-import { collections } from '../config';
+import { User, Rank, PlatformSettings } from '../types';
+import { getRankConfig } from '../utils/ranks';
+import { updateMlmStructure } from '../utils/mlm';
+import { AutopoolService } from '../services/autopoolService';
 
-const logger = createLogger('OnUserCreated');
+const db = admin.firestore();
 
 export const onUserCreated = functions.firestore
-  .document(`${collections.USERS}/{userId}`)
-  .onCreate(async (snap, context) => {
+  .document('users/{userId}')
+  .onCreate(async (snapshot, context) => {
+    const newUser = snapshot.data() as User;
     const userId = context.params.userId;
-    const userData = snap.data();
+
+    console.log(`New user created: ${userId}`);
 
     try {
-      await logger.info(
-        LogCategory.AUTH,
-        'Processing new user creation',
-        userId,
-        { email: userData.email, fullName: userData.fullName }
-      );
+      // Initialize MLM data for the new user
+      await updateMlmStructure(userId, newUser.sponsorId || null, newUser.placementId || null, newUser.position || null);
 
-      // Initialize user MLM data
-      await initializeUserMLMData(userId, userData);
+      // Assign user to autopool
+      const autopoolService = new AutopoolService();
+      await autopoolService.assignToNextPosition(userId, newUser.currentRank);
 
-      // Update sponsor's referral count if sponsor exists
-      if (userData.sponsorUID) {
-        await updateSponsorReferralCount(userData.sponsorUID, userId);
+      // Fetch platform settings for welcome bonus
+      const platformSettingsSnap = await db.collection('platformSettings').doc('general').get();
+      const platformSettings = platformSettingsSnap.data() as PlatformSettings;
+
+      if (platformSettings && platformSettings.welcomeBonus > 0) {
+        // Create welcome income transaction (if applicable)
+        await createWelcomeBonus(userId);
+
+        await logger.info(
+          LogCategory.AUTH,
+          'User creation processing completed successfully',
+          userId
+        );
+
+      } catch (error) {
+        await logger.error(
+          LogCategory.AUTH,
+          'Failed to process user creation',
+          error as Error,
+          userId,
+          { userData }
+        );
+        
+        // Don't throw error to prevent user creation failure
+        // Log the error and continue
       }
-
-      // Create welcome income transaction (if applicable)
-      await createWelcomeBonus(userId);
-
-      await logger.info(
-        LogCategory.AUTH,
-        'User creation processing completed successfully',
-        userId
-      );
-
-    } catch (error) {
-      await logger.error(
-        LogCategory.AUTH,
-        'Failed to process user creation',
-        error as Error,
-        userId,
-        { userData }
-      );
-      
-      // Don't throw error to prevent user creation failure
-      // Log the error and continue
-    }
-  });
+    });
 
 /**
  * Initialize user MLM data

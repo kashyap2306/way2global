@@ -1,5 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { AutopoolService, GlobalAutopoolPosition } from '../services/autopoolService';
+import { User, PlatformSettings } from '../types';
 
 const db = admin.firestore();
 
@@ -14,11 +16,12 @@ export const autoPoolIncomeGenerator = functions.pubsub
     console.log('Starting auto pool income generation...');
     
     try {
-      // Get platform settings for income rates
-      const settingsDoc = await db.collection('settings').doc('platform').get();
-      const settings = settingsDoc.data() || {};
-      
-      // Default income rates per hour (in USD)
+      const autopoolService = new AutopoolService();
+
+      // Get platform settings for income rates and direct referral requirement
+      const platformSettingsSnap = await db.collection('platformSettings').doc('general').get();
+      const platformSettings = platformSettingsSnap.data() as PlatformSettings;
+
       const incomeRates = {
         'Bronze': 0.10,    // $0.10 per hour
         'Silver': 0.25,    // $0.25 per hour
@@ -27,45 +30,51 @@ export const autoPoolIncomeGenerator = functions.pubsub
         'Diamond': 2.00,   // $2.00 per hour
         'Crown': 5.00      // $5.00 per hour
       };
+      const requiredDirectReferrals = platformSettings.directReferralRequirement || 2;
       
-      // Get all users with active ranks
-      const usersSnapshot = await db.collection('users')
-        .where('status', '==', 'active')
-        .where('rank', '!=', 'Inactive')
-        .get();
-      
-      const batch = db.batch();
-      let processedUsers = 0;
-      
-      for (const userDoc of usersSnapshot.docs) {
-        const userData = userDoc.data();
-        const userId = userDoc.id;
-        const userRank = userData.rank;
+      let processedPositions = 0;
+      let currentPosition: GlobalAutopoolPosition | null = null;
+
+      // Loop to process positions sequentially
+      while ((currentPosition = await autopoolService.getNextDistributionPosition()) !== null) {
+        const userId = currentPosition.userId;
+        const userRank = currentPosition.rank;
+        const positionNumber = currentPosition.position;
+
+        // Fetch user data to get directReferrals count
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (!userDoc.exists) {
+          console.warn(`User ${userId} not found for autopool position ${positionNumber}. Skipping.`);
+          await autopoolService.updateNextDistributionPosition(positionNumber + 1);
+          continue;
+        }
+        const userData = userDoc.data() as User;
         
-        // Skip if user doesn't have a valid rank
+        // Skip if user doesn't have a valid rank for income
         if (!incomeRates[userRank as keyof typeof incomeRates]) {
+          console.warn(`User ${userId} has invalid rank ${userRank} for autopool position ${positionNumber}. Skipping income generation.`);
+          await autopoolService.updateNextDistributionPosition(positionNumber + 1);
           continue;
         }
         
         const hourlyIncome = incomeRates[userRank as keyof typeof incomeRates];
         
-        // Check direct referrals count
         const directReferralsCount = userData.directReferrals || 0;
-        const requiredDirectReferrals = settings.directReferralRequirement || 2;
         
         // Determine if income goes to locked or available balance
         const canClaim = directReferralsCount >= requiredDirectReferrals;
         
+        const batch = db.batch();
+
         // Create income transaction
-        const incomeTransactionRef = db.collection('users').doc(userId)
-          .collection('incomeTransactions').doc();
+        const incomeTransactionRef = db.collection('incomeTransactions').doc();
         
         const incomeTransaction = {
           id: incomeTransactionRef.id,
           userId: userId,
           rank: userRank,
           amount: hourlyIncome,
-          type: 'pool_income',
+          type: 'autopool_income',
           status: canClaim ? 'available' : 'locked',
           lockedBalance: canClaim ? 0 : hourlyIncome,
           availableBalance: canClaim ? hourlyIncome : 0,
@@ -73,11 +82,11 @@ export const autoPoolIncomeGenerator = functions.pubsub
           requiredDirectReferrals: requiredDirectReferrals,
           canClaim: canClaim,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          claimedAt: null,
           metadata: {
             generatedBy: 'autoPoolIncomeGenerator',
             hourlyRate: hourlyIncome,
-            conditionMet: canClaim
+            conditionMet: canClaim,
+            autopoolPosition: positionNumber
           }
         };
         
@@ -98,26 +107,22 @@ export const autoPoolIncomeGenerator = functions.pubsub
           });
         }
         
-        processedUsers++;
-        
-        // Commit batch every 500 operations to avoid limits
-        if (processedUsers % 500 === 0) {
-          await batch.commit();
-          console.log(`Processed ${processedUsers} users so far...`);
-        }
-      }
-      
-      // Commit remaining operations
-      if (processedUsers % 500 !== 0) {
+        // Mark position as distributed and update next distribution pointer
+        batch.update(db.collection('globalAutopool').doc(String(positionNumber)), {
+          lastDistributedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        await autopoolService.updateNextDistributionPosition(positionNumber + 1);
+
         await batch.commit();
+        processedPositions++;
       }
       
-      console.log(`Auto pool income generation completed. Processed ${processedUsers} users.`);
+      console.log(`Auto pool income generation completed. Processed ${processedPositions} autopool positions.`);
       
       // Log the operation for audit
       await db.collection('systemLogs').add({
         type: 'auto_pool_income_generation',
-        processedUsers: processedUsers,
+        processedEntries: processedPositions,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         status: 'completed'
       });
@@ -150,11 +155,12 @@ export const manualPoolIncomeGeneration = functions.https.onCall(async (data, co
     // Trigger the same logic as the scheduled function
     console.log('Manual pool income generation triggered by admin');
     
-    // Get platform settings for income rates
-    const settingsDoc = await db.collection('settings').doc('platform').get();
-    const settings = settingsDoc.data() || {};
-    
-    // Default income rates per manual trigger (can be different from hourly)
+    const autopoolService = new AutopoolService();
+
+    // Get platform settings for income rates and direct referral requirement
+    const platformSettingsSnap = await db.collection('platformSettings').doc('general').get();
+    const platformSettings = platformSettingsSnap.data() as PlatformSettings;
+
     const incomeRates = {
       'Bronze': 0.10,
       'Silver': 0.25,
@@ -163,40 +169,48 @@ export const manualPoolIncomeGeneration = functions.https.onCall(async (data, co
       'Diamond': 2.00,
       'Crown': 5.00
     };
+    const requiredDirectReferrals = platformSettings.directReferralRequirement || 2;
     
-    // Get all users with active ranks
-    const usersSnapshot = await db.collection('users')
-      .where('status', '==', 'active')
-      .where('rank', '!=', 'Inactive')
-      .get();
-    
-    const batch = db.batch();
-    let processedUsers = 0;
-    
-    for (const userDoc of usersSnapshot.docs) {
-      const userData = userDoc.data();
-      const userId = userDoc.id;
-      const userRank = userData.rank;
+    let processedPositions = 0;
+    let currentPosition: GlobalAutopoolPosition | null = null;
+
+    // Loop to process positions sequentially
+    while ((currentPosition = await autopoolService.getNextDistributionPosition()) !== null) {
+      const userId = currentPosition.userId;
+      const userRank = currentPosition.rank;
+      const positionNumber = currentPosition.position;
+
+      // Fetch user data to get directReferrals count
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (!userDoc.exists) {
+        console.warn(`User ${userId} not found for autopool position ${positionNumber}. Skipping.`);
+        await autopoolService.updateNextDistributionPosition(positionNumber + 1);
+        continue;
+      }
+      const userData = userDoc.data() as User;
       
       if (!incomeRates[userRank as keyof typeof incomeRates]) {
+        console.warn(`User ${userId} has invalid rank ${userRank} for autopool position ${positionNumber}. Skipping income generation.`);
+        await autopoolService.updateNextDistributionPosition(positionNumber + 1);
         continue;
       }
       
       const income = incomeRates[userRank as keyof typeof incomeRates];
       const directReferralsCount = userData.directReferrals || 0;
-      const requiredDirectReferrals = settings.directReferralRequirement || 2;
+      
       const canClaim = directReferralsCount >= requiredDirectReferrals;
       
+      const batch = db.batch();
+
       // Create income transaction
-      const incomeTransactionRef = db.collection('users').doc(userId)
-        .collection('incomeTransactions').doc();
+      const incomeTransactionRef = db.collection('incomeTransactions').doc();
       
       const incomeTransaction = {
         id: incomeTransactionRef.id,
         userId: userId,
         rank: userRank,
         amount: income,
-        type: 'pool_income_manual',
+        type: 'autopool_income_manual',
         status: canClaim ? 'available' : 'locked',
         lockedBalance: canClaim ? 0 : income,
         availableBalance: canClaim ? income : 0,
@@ -204,11 +218,11 @@ export const manualPoolIncomeGeneration = functions.https.onCall(async (data, co
         requiredDirectReferrals: requiredDirectReferrals,
         canClaim: canClaim,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        claimedAt: null,
         metadata: {
           generatedBy: 'manualPoolIncomeGeneration',
           triggeredBy: context.auth.uid,
-          manualTrigger: true
+          manualTrigger: true,
+          autopoolPosition: positionNumber
         }
       };
       
@@ -229,15 +243,20 @@ export const manualPoolIncomeGeneration = functions.https.onCall(async (data, co
         });
       }
       
-      processedUsers++;
+      // Mark position as distributed and update next distribution pointer
+      batch.update(db.collection('globalAutopool').doc(String(positionNumber)), {
+        lastDistributedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      await autopoolService.updateNextDistributionPosition(positionNumber + 1);
+
+      await batch.commit();
+      processedPositions++;
     }
-    
-    await batch.commit();
     
     return {
       success: true,
-      processedUsers: processedUsers,
-      message: `Manual pool income generation completed for ${processedUsers} users`
+      processedUsers: processedPositions,
+      message: `Manual pool income generation completed for ${processedPositions} users`
     };
     
   } catch (error) {

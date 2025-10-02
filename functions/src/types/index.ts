@@ -1,11 +1,11 @@
 /**
  * TypeScript Interfaces and Types for MLM Platform
  */
-
-import { Timestamp } from 'firebase-admin/firestore';
-
-// ============================================================================
-// ENUMS
+  
+  import { Timestamp } from 'firebase-admin/firestore';
+  
+  // ============================================================================
+  // ENUMS
 // ============================================================================
 
 export enum UserStatus {
@@ -101,6 +101,9 @@ export interface PlatformSettings {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   updatedBy?: string;
+  autopool?: {
+    lastFilledPosition: number;
+  };
 }
 
 // ============================================================================

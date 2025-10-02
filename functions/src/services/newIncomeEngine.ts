@@ -388,6 +388,71 @@ export class NewIncomeEngine {
     }
   }
 
+  /**
+   * Distribute level income up the sponsor chain
+   */
+  async distributeLevelIncome(
+    userUID: string,
+    activationAmount: number,
+    transaction: admin.firestore.Transaction
+  ): Promise<void> {
+    let currentSponsorUID = userUID;
+    for (let level = 1; level <= 6; level++) {
+      const userDoc = await transaction.get(this.db.collection(collections.USERS).doc(currentSponsorUID));
+      const userData = userDoc.data() as User;
+
+      if (!userData || !userData.sponsorUID) {
+        break; // No more sponsors up the chain
+      }
+
+      const sponsorUID = userData.sponsorUID;
+      const levelPercentage = mlmConfig.incomes.level.percentages[level - 1];
+
+      if (levelPercentage === undefined || levelPercentage <= 0) {
+        logger.warn(
+          LogCategory.MLM,
+          `Level income percentage not defined or zero for level ${level}`,
+          sponsorUID,
+          { level, userUID, activationAmount }
+        );
+        currentSponsorUID = sponsorUID;
+        continue;
+      }
+
+      const levelIncome = activationAmount * (levelPercentage / 100);
+
+      const sponsorDocRef = this.db.collection(collections.USERS).doc(sponsorUID);
+      transaction.update(sponsorDocRef, {
+        availableBalance: admin.firestore.FieldValue.increment(levelIncome)
+      });
+
+      const incomeTxRef = this.db.collection(collections.INCOME_TRANSACTIONS).doc();
+      transaction.set(incomeTxRef, {
+        userId: sponsorUID,
+        type: 'level_income',
+        amount: levelIncome,
+        status: 'completed',
+        description: `Level ${level} income from ${userUID}'s rank activation`,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        metadata: {
+          sourceUserUID: userUID,
+          activationAmount,
+          level,
+          percentage: levelPercentage
+        }
+      });
+
+      await logger.info(
+        LogCategory.MLM,
+        `Level ${level} income processed: ${levelIncome} for sponsor ${sponsorUID}`,
+        sponsorUID,
+        { sourceUserUID: userUID, level, levelIncome, activationAmount }
+      );
+
+      currentSponsorUID = sponsorUID;
+    }
+  }
+
   // Helper methods
   private getMaxPoolIncome(rank: string): number {
     const rankConfig = mlmConfig.ranks[rank as keyof typeof mlmConfig.ranks];

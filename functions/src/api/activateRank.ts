@@ -5,12 +5,15 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+admin.initializeApp();
 import { createLogger, LogCategory } from '../utils/logger';
 import { collections, mlmConfig } from '../config';
 import { IncomePool, User, Transaction } from '../types';
 import { newIncomeEngine } from '../services/newIncomeEngine';
+import { AutopoolService } from '../services/autopoolService';
 
 const logger = createLogger('ActivateRank');
+const autopoolService = new AutopoolService();
 
 interface ActivateRankRequest {
   rank: string;
@@ -25,6 +28,59 @@ interface ActivateRankResponse {
   activatedRanks: string[];
   totalCost: number;
   poolIds: string[];
+}
+
+/**
+ * Helper function to process a single rank activation
+ * Handles autopool assignment, income pool creation, and rank activation
+ */
+async function _processRankActivationInternal(
+  userUID: string,
+  rankKey: string,
+  cost: number,
+  transactionHash: string | undefined,
+  paymentMethod: 'wallet' | 'external',
+  transaction: FirebaseFirestore.Transaction,
+  userData: User
+): Promise<{ poolId: string }> {
+  const db = admin.firestore();
+
+  // Assign user to the next position in the autopool for this rank
+  await autopoolService.assignToNextPosition(userUID, rankKey);
+
+  // Create income pool with pending income logic
+  const poolRef = db.collection(collections.INCOME_POOLS).doc();
+  const poolData: IncomePool = {
+    id: poolRef.id,
+    userUID,
+    rank: rankKey,
+    poolIncome: 0,
+    maxPoolIncome: cost * 100, // 100x activation amount
+    isLocked: true,
+    canClaim: false,
+    directReferralsCount: userData.directReferralsCount || 0,
+    requiredDirectReferrals: 2, // Income credited only after 2 direct referrals
+    activatedAt: admin.firestore.FieldValue.serverTimestamp() as any,
+    lastIncomeAt: null,
+    claimedAt: null,
+    metadata: {
+      activationAmount: cost,
+      transactionId: transactionHash || null
+    }
+  };
+
+  transaction.set(poolRef, poolData);
+
+  // Update user's rank activation status
+  transaction.update(db.collection(collections.USERS).doc(userUID), {
+    [`rankActivations.${rankKey}`]: {
+      isActive: true,
+      activatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      poolId: poolRef.id
+    }
+  });
+
+  return { poolId: poolRef.id };
 }
 
 export const activateRank = functions.https.onCall(
@@ -183,62 +239,77 @@ export const activateRank = functions.https.onCall(
         // Process each rank activation
         for (const detail of activationDetails) {
           const { rank: rankKey, cost } = detail;
-          
-          // Create income pool
-          const poolRef = db.collection(collections.INCOME_POOLS).doc();
-          const poolData: IncomePool = {
-            id: poolRef.id,
+          const { poolId } = await _processRankActivationInternal(
             userUID,
-            rank: rankKey,
-            poolIncome: 0,
-            maxPoolIncome: cost * 100, // 100x activation amount
-            isLocked: true,
-            canClaim: false,
-            directReferralsCount: userData.directReferralsCount || 0,
-            requiredDirectReferrals: 2, // Default, will be updated from settings
-            activatedAt: admin.firestore.FieldValue.serverTimestamp() as any,
-            lastIncomeAt: null,
-            claimedAt: null,
-            metadata: {
-              activationAmount: cost,
-              transactionId: activationTransactionRef.id
-            }
-          };
-
-          transaction.set(poolRef, poolData);
-          poolIds.push(poolRef.id);
-
-          // Update user's rank activation status
-          transaction.update(userDoc.ref, {
-            [`rankActivations.${rankKey}`]: {
-              isActive: true,
-              activatedAt: admin.firestore.FieldValue.serverTimestamp(),
-              poolId: poolRef.id
-            }
-          });
-
+            rankKey,
+            cost,
+            activationTransactionRef.id,
+            paymentMethod,
+            transaction,
+            userData
+          );
+          poolIds.push(poolId);
           activatedRanks.push(rankKey);
         }
       });
 
-      // Process referral income for sponsor (if user has a sponsor)
+      // Process instant direct referral commission and level income distribution
       if (userData.sponsorUID) {
         try {
-          await newIncomeEngine.processReferralIncome(
-            userData.sponsorUID,
-            userUID,
-            totalCost,
-            `activation_${Date.now()}`
-          );
+          // 1. Instant Direct Referral Commission (25% of activation amount)
+          const directReferralPercentage = mlmConfig.incomes.direct.percentage || 0.25; // Default to 25%
+          const directReferralCommission = totalCost * directReferralPercentage;
+
+          const sponsorDocRef = db.collection(collections.USERS).doc(userData.sponsorUID);
+          const sponsorDoc = await transaction.get(sponsorDocRef);
+          const sponsorData = sponsorDoc.data() as User;
+
+          if (sponsorData) {
+            // Update sponsor's available balance
+            transaction.update(sponsorDocRef, {
+              availableBalance: admin.firestore.FieldValue.increment(directReferralCommission)
+            });
+
+            // Create income transaction for sponsor
+            const sponsorIncomeTxRef = db.collection(collections.INCOME_TRANSACTIONS).doc();
+            transaction.set(sponsorIncomeTxRef, {
+              userId: userData.sponsorUID,
+              type: 'direct_referral_commission',
+              amount: directReferralCommission,
+              status: 'completed',
+              description: `Instant direct referral commission for ${userData.displayName || userUID}'s rank activation`,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              metadata: {
+                referrerId: userUID,
+                activatedRankCost: totalCost,
+                percentage: directReferralPercentage
+              }
+            });
+
+            logger.info( // Removed await
+              LogCategory.MLM,
+              'Instant direct referral commission processed',
+              userData.sponsorUID,
+              {
+                referrerId: userUID,
+                commission: directReferralCommission,
+                activatedRankCost: totalCost
+              }
+            );
+          }
+
+          // 2. Level Income Distribution (up to 6 levels)
+          newIncomeEngine.distributeLevelIncome(userUID, totalCost, transaction);
+
         } catch (error) {
-          await logger.warn(
+          logger.error(
             LogCategory.MLM,
-            'Failed to process referral income for sponsor',
+            'Failed to process instant direct referral commission or level income',
             userUID,
-            { 
-              sponsorUID: userData.sponsorUID, 
+            {
+              sponsorUID: userData.sponsorUID,
               error: error instanceof Error ? error.message : String(error),
-              totalCost 
+              totalCost
             }
           );
         }
@@ -251,7 +322,7 @@ export const activateRank = functions.https.onCall(
           await newIncomeEngine.updateDirectReferralCount(userData.sponsorUID);
         }
       } catch (error) {
-        await logger.warn(
+        logger.warn(
           LogCategory.MLM,
           'Failed to update direct referral counts',
           userUID,
@@ -259,7 +330,7 @@ export const activateRank = functions.https.onCall(
         );
       }
 
-      await logger.info(
+      logger.info(
         LogCategory.MLM,
         `Rank activation successful: ${activatedRanks.join(', ')} for user ${userUID}`,
         userUID,
@@ -281,7 +352,7 @@ export const activateRank = functions.https.onCall(
       };
 
     } catch (error) {
-      await logger.error(
+      logger.error(
         LogCategory.MLM,
         'Failed to activate rank',
         context.auth?.uid || '',

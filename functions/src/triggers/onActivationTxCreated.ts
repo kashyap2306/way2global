@@ -4,10 +4,14 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+admin.initializeApp();
 import { createLogger, LogCategory } from '../utils/logger';
 import { collections } from '../config';
 
+import { AutopoolService } from '../services/autopoolService';
+
 const logger = createLogger('OnActivationTxCreated');
+const autopoolService = new AutopoolService();
 
 // Level and Re-Level Income processing removed - system now uses direct pool income only
 
@@ -40,7 +44,10 @@ export const onActivationTxCreated = functions.firestore
       );
 
       // Update user rank and activation status - immediate unlock
-      await updateUserRank(transactionData.uid, transactionData.rank);
+      // Only activate user and update rank if it's an activation transaction or a $5 topup
+      if (transactionData.type === 'activation' || (transactionData.type === 'topup' && transactionData.amount === 5)) {
+        await updateUserRank(transactionData.uid, transactionData.rank);
+      }
 
       // Process income using the new income engine
       const { incomeEngine } = await import('../services/incomeEngine');
@@ -93,6 +100,9 @@ async function updateUserRank(uid: string, newRank: string): Promise<void> {
       // Track direct referrals count for claiming eligibility
       directReferralsCount: admin.firestore.FieldValue.increment(0)
     });
+
+    // Assign user to the global autopool for the new rank
+    await autopoolService.assignToNextPosition(uid, newRank);
 
     await logger.info(
       LogCategory.MLM,

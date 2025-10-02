@@ -155,7 +155,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (item.isLogout) {
       auth.signOut();
     }
-    onClose(); // Close sidebar on mobile after navigation
+    if (isOpen) { // Only close sidebar on mobile after navigation
+      onClose();
+    }
   };
 
   return (
@@ -173,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-slate-900 via-blue-900 to-slate-800 shadow-lg transform transition-transform duration-300 ease-in-out z-50
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
-      `}>
+      }`}>
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-700/50">

@@ -3,6 +3,7 @@
  */
 
 import * as admin from 'firebase-admin';
+admin.initializeApp();
 import { createLogger, LogCategory } from '../utils/logger';
 import { collections, mlmConfig } from '../config';
 import { roundToTwoDecimals, safeSubtract } from '../utils/math';

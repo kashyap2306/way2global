@@ -4,6 +4,7 @@
  */
 
 import * as admin from 'firebase-admin';
+admin.initializeApp();
 import { logger, LogCategory } from '../utils/logger';
 
 // Generate unique userCode (WG + 6 digits)

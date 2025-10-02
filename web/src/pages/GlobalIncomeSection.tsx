@@ -390,7 +390,7 @@ const GlobalIncomeSection: React.FC = () => {
 
       const responseData = result.data as { success: boolean; message?: string };
       if (responseData.success) {
-        showSuccess('Rank Unlocked', `Successfully unlocked ${rank} rank!`);
+        showSuccess('Rank Activation', responseData.message || `Successfully unlocked ${rank} rank!`);
       } else {
         throw new Error(responseData.message || 'Failed to unlock rank');
       }

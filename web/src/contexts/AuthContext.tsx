@@ -54,6 +54,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   loading: boolean;
   updateUserData: (data: Partial<MLMUserData>) => Promise<void>;
+  showActivationPopup: boolean;
+  setShowActivationPopup: (show: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,6 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<MLMUserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showActivationPopup, setShowActivationPopup] = useState(false);
 
   const signup = async (email: string, password: string, displayName: string, phone?: string, walletAddress?: string, sponsorId?: string): Promise<User> => {
     try {
@@ -138,6 +141,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setUserData(completeUserData);
       console.log('[AuthContext] Login successful for user:', userData.displayName);
+
+      // Check if user is inactive and set popup state
+      if (!completeUserData.isActive) {
+        setShowActivationPopup(true);
+      }
       
     } catch (error) {
       console.error('[AuthContext] Login error:', error);
@@ -150,6 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[AuthContext] Logging out user');
       await signOut(auth);
       setUserData(null);
+      setShowActivationPopup(false);
     } catch (error) {
       console.error('[AuthContext] Logout error:', error);
       throw error;
@@ -167,7 +176,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Update local state
       if (userData) {
-        setUserData({ ...userData, ...data });
+        const updated = { ...userData, ...data };
+        setUserData(updated);
+        // If user becomes active, hide the popup
+        if (updated.isActive) {
+          setShowActivationPopup(false);
+        }
       }
       
       console.log('[AuthContext] User data updated successfully');
@@ -192,10 +206,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               ...fetchedUserData,
               uid: firebaseUser.uid
             });
+            // Check if user is inactive and set popup state
+            if (!fetchedUserData.isActive) {
+              setShowActivationPopup(true);
+            } else {
+              setShowActivationPopup(false);
+            }
             console.log('[AuthContext] User data updated via real-time listener');
           } else {
             console.error('[AuthContext] User document not found:', firebaseUser.uid);
             setUserData(null);
+            setShowActivationPopup(false);
           }
           setLoading(false);
         });
@@ -205,6 +226,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         setUserData(null);
         setLoading(false);
+        setShowActivationPopup(false);
       }
     });
 
@@ -220,7 +242,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signup,
     logout,
     loading,
-    updateUserData
+    updateUserData,
+    showActivationPopup,
+    setShowActivationPopup
   };
 
   return (
